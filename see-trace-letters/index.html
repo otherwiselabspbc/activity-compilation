@@ -1,0 +1,1649 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Trace Letters</title>
+<meta name="description" content="See a letter and trace it by hand. ORT-04 · Orthographic Knowledge · Tactile Only · See, Trace · See Letter, Trace Letter · Letter Units Group 1 (lower-case) and Group 2 (upper-case). Ball-and-stick stroke convention v1.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Andika:ital,wght@0,400;0,700&display=swap">
+<style>
+/* ---------- tokens and components shared with see-trace-name-letters (RP-10, VZ-8) ---------- */
+:root{
+  --ground:#F3EEE4;
+  --paper:#FBF8F2;
+  --ink:#3A3733;
+  --ink-soft:#6B655C;
+  --stone:#D8D0C2;
+  --stone-deep:#C4BAA8;
+  --lake:#2F5D7C;
+  --lake-soft:#5B84A0;
+  --marigold:#D9A441;
+  --marigold-deep:#B9862C;
+  --sage:#6E9B72;
+  --line:#E6DFD2;
+  --shadow:0 2px 0 rgba(58,55,51,.06), 0 10px 24px rgba(58,55,51,.08);
+  --font:"Andika","Comic Neue","Segoe Print","Trebuchet MS",sans-serif;
+  --radius:28px;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;background:var(--ground);color:var(--ink);font-family:var(--font);
+  font-size:18px;letter-spacing:.04em;line-height:1.5;
+  -webkit-text-size-adjust:100%;overscroll-behavior:none;-webkit-tap-highlight-color:transparent;
+}
+button{font:inherit;letter-spacing:inherit;color:inherit;cursor:pointer}
+button:focus-visible,[tabindex]:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--lake);outline-offset:3px}
+h1,h2,h3{text-wrap:balance;margin:0;line-height:1.25}
+#app{position:fixed;inset:0;overflow:hidden;touch-action:manipulation;-webkit-touch-callout:none}
+.screen{position:absolute;inset:0;display:none;flex-direction:column}
+.screen.is-active{display:flex}
+[hidden]{display:none !important}
+
+/* ---------- start screen ---------- */
+#screen-start{align-items:center;justify-content:center;padding:24px 24px calc(24px + env(safe-area-inset-bottom,0px));gap:28px;text-align:center}
+#screen-start h1{font-size:clamp(1.6rem,4.2vw,2.6rem);font-weight:700;letter-spacing:.05em}
+.preview{display:flex;gap:.35em;justify-content:center;flex-wrap:wrap;color:var(--stone-deep);font-size:clamp(2.6rem,9vw,5rem);line-height:1;font-weight:700;letter-spacing:.08em}
+.big-start{
+  width:132px;height:132px;border-radius:50%;border:0;background:var(--lake);color:#fff;
+  box-shadow:var(--shadow);display:grid;place-items:center;transition:transform .12s ease;
+}
+.big-start:active{transform:scale(.96)}
+.big-start svg{width:54px;height:54px;margin-left:6px}
+.big-start.is-mic svg{margin-left:0}
+.start-label{font-size:1.15rem;color:var(--ink-soft)}
+.gear{
+  position:absolute;top:16px;right:16px;width:64px;height:64px;border-radius:50%;border:0;
+  background:transparent;color:var(--ink-soft);display:grid;place-items:center;opacity:.55
+}
+.gear:hover,.gear:focus-visible{opacity:1;background:var(--paper)}
+.gear svg{width:30px;height:30px}
+body[data-hand="left"] .gear{right:auto;left:16px}
+
+/* ---------- activity screen ---------- */
+#screen-activity{padding:0;user-select:none;-webkit-user-select:none}
+.top{padding:clamp(12px,2.2vh,22px) clamp(18px,3vw,36px) 0;min-height:12vh;display:flex;flex-direction:column;justify-content:flex-end;gap:2px}
+#prompt{font-size:clamp(1.35rem,3.4vw,2.2rem);font-weight:700;letter-spacing:.06em}
+#prompt .unit{color:var(--lake);font-size:1.25em;line-height:1;padding-left:.15em}
+#feedback{font-size:clamp(1rem,2.3vw,1.4rem);color:var(--ink-soft);min-height:1.5em;letter-spacing:.05em}
+#feedback .unit{color:var(--lake);font-weight:700}
+.work{flex:1;min-height:0;padding:clamp(8px,1.5vh,16px) clamp(18px,3vw,36px);touch-action:none}
+#cells{height:100%;width:100%;display:flex;justify-content:center;align-items:center}
+.cell{
+  position:relative;background:var(--paper);border-radius:var(--radius);box-shadow:var(--shadow);
+  touch-action:none;user-select:none;-webkit-user-select:none;overflow:hidden;
+  width:var(--cw,50vh);height:var(--ch,100%);flex:none;
+  transition:opacity .35s ease,transform .35s ease;
+}
+.cell.is-dim{opacity:.32}
+.cell.is-done{box-shadow:0 0 0 3px var(--sage) inset,var(--shadow)}
+.cell svg{position:absolute;inset:0;width:100%;height:100%;display:block}
+.guide path{fill:none;stroke:var(--stone);stroke-width:14;stroke-linecap:round;stroke-linejoin:round}
+.arrows path{fill:var(--marigold);stroke:var(--paper);stroke-width:1.5}
+.markers circle{fill:var(--marigold)}
+.markers text{fill:var(--ink);font-family:var(--font);font-weight:700;font-size:13px;text-anchor:middle;dominant-baseline:central;pointer-events:none}
+.ink path{fill:none;stroke:var(--lake);stroke-width:12;stroke-linecap:round;stroke-linejoin:round;transition:stroke .4s ease,opacity .4s ease}
+.cell.is-done .ink path{stroke:var(--sage)}
+.cell.is-fading .ink path{opacity:0}
+.anim path{fill:none;stroke:var(--lake-soft);stroke-width:12;stroke-linecap:round;stroke-linejoin:round}
+.anim circle{fill:var(--lake)}
+.ring{fill:none;stroke:var(--marigold);stroke-width:5;opacity:0}
+.cell.is-target-shown .ring{opacity:1}
+.cell.is-pulsing .ring{animation:ring-pulse 1.1s ease-in-out 2}
+@keyframes ring-pulse{0%,100%{stroke-width:5;opacity:1}50%{stroke-width:10;opacity:.55}}
+.badge{position:absolute;top:10px;right:10px;width:44px;height:44px;border-radius:50%;background:var(--sage);color:#fff;display:grid;place-items:center;opacity:0;transform:scale(.6);transition:opacity .3s ease,transform .3s ease;pointer-events:none}
+.badge svg{width:26px;height:26px}
+.cell.is-done .badge{opacity:1;transform:none}
+.bottom{height:calc(104px + env(safe-area-inset-bottom,0px));position:relative}
+.replay{
+  position:absolute;left:clamp(14px,2.5vw,28px);bottom:calc(18px + env(safe-area-inset-bottom,0px));width:72px;height:72px;border-radius:50%;border:0;touch-action:manipulation;
+  background:var(--paper);box-shadow:var(--shadow);display:grid;place-items:center;color:var(--lake);
+}
+.replay:active{transform:scale(.96)}
+.replay svg{width:34px;height:34px}
+.replay.is-speaking{box-shadow:0 0 0 4px var(--lake-soft) inset,var(--shadow)}
+body[data-hand="left"] .replay{left:auto;right:clamp(14px,2.5vw,28px)}
+.progress{position:absolute;right:clamp(18px,3vw,36px);bottom:calc(40px + env(safe-area-inset-bottom,0px));display:flex;gap:10px}
+body[data-hand="left"] .progress{right:auto;left:clamp(18px,3vw,36px)}
+.progress i{width:16px;height:16px;border-radius:50%;border:3px solid var(--stone-deep);display:block}
+.progress i.is-filled{background:var(--sage);border-color:var(--sage)}
+.progress i.is-current{border-color:var(--lake)}
+/* ---------- completion screen ---------- */
+#screen-complete{align-items:center;justify-content:center;padding:24px 24px calc(24px + env(safe-area-inset-bottom,0px));gap:26px;text-align:center}
+#complete-text{font-size:clamp(1.5rem,4vw,2.4rem);font-weight:700}
+.ink-row{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;max-width:900px}
+.ink-row .mini{width:clamp(70px,11vw,120px);aspect-ratio:120/220;background:var(--paper);border-radius:18px;box-shadow:var(--shadow);opacity:0;transform:translateY(14px);animation:rise .5s ease forwards}
+.ink-row.no-anim .mini{animation:none;opacity:1;transform:none}
+.ink-row .mini svg{width:100%;height:100%;display:block}
+.ink-row .mini path{fill:none;stroke:var(--lake);stroke-width:12;stroke-linecap:round;stroke-linejoin:round}
+.ink-row .mini.is-guide path{stroke:var(--stone)}
+@keyframes rise{to{opacity:1;transform:none}}
+.row{display:flex;gap:16px;flex-wrap:wrap;justify-content:center}
+.btn{
+  min-height:64px;min-width:160px;padding:0 28px;border-radius:32px;border:0;background:var(--paper);
+  box-shadow:var(--shadow);font-size:1.15rem;font-weight:700;color:var(--ink)
+}
+.btn.is-primary{background:var(--lake);color:#fff}
+.btn.is-quiet{background:transparent;box-shadow:none;color:var(--ink-soft);font-weight:400;min-width:0}
+.results-toggle{position:absolute;bottom:16px;right:16px}
+
+/* ---------- tutor drawer ---------- */
+#tutor{
+  position:absolute;top:0;right:0;bottom:0;width:min(480px,100%);background:var(--paper);box-shadow:-8px 0 30px rgba(58,55,51,.12);
+  transform:translateX(105%);transition:transform .25s ease;overflow:auto;padding:22px 22px 40px;z-index:20;
+  font-size:15px;letter-spacing:.02em
+}
+#tutor.is-open{transform:none}
+#tutor h2{font-size:1.2rem;margin:0 0 6px}
+#tutor h3{font-size:.85rem;text-transform:uppercase;letter-spacing:.12em;color:var(--ink-soft);margin:22px 0 8px}
+#tutor p{margin:0 0 10px;max-width:60ch}
+.drawer-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px}
+.close{width:48px;height:48px;border-radius:50%;border:0;background:var(--ground)}
+.field{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
+.field label{font-weight:700}
+.seg{display:flex;flex-wrap:wrap;gap:6px}
+.seg button{min-height:44px;padding:0 14px;border-radius:22px;border:2px solid var(--line);background:var(--paper)}
+.seg button[aria-pressed="true"]{border-color:var(--lake);background:var(--lake);color:#fff}
+.seg button:disabled{opacity:.5;cursor:default}
+.letters{display:grid;grid-template-columns:repeat(9,1fr);gap:6px;margin-top:8px}
+.letters button{min-height:44px;border-radius:12px;border:2px solid var(--line);background:var(--paper);font-size:1.15rem;font-weight:700}
+.letters button[aria-pressed="true"]{border-color:var(--lake);background:var(--lake);color:#fff}
+.hint{color:var(--ink-soft);font-size:.9rem}
+.status{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:6px 0 10px}
+select,input[type="text"]{font:inherit;padding:8px 10px;border-radius:10px;border:2px solid var(--line);background:#fff;color:var(--ink);max-width:100%}
+textarea{width:100%;min-height:150px;font:12px/1.4 ui-monospace,Consolas,monospace;padding:10px;border-radius:10px;border:2px solid var(--line);background:#fff;color:var(--ink);resize:vertical}
+.small-btn{min-height:44px;padding:0 16px;border-radius:22px;border:2px solid var(--line);background:var(--paper);font-weight:700}
+.small-btn.is-primary{background:var(--lake);border-color:var(--lake);color:#fff}
+.flag{border-left:4px solid var(--marigold);padding:8px 12px;background:var(--ground);border-radius:0 12px 12px 0;margin-bottom:10px}
+.flag b{display:block}
+code{font-family:ui-monospace,Consolas,monospace;font-size:.92em;background:var(--ground);padding:1px 5px;border-radius:5px}
+.visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+@media (max-width:700px){
+  .top{min-height:11vh}
+  .bottom{height:92px}
+  .replay{width:64px;height:64px}
+  .letters{grid-template-columns:repeat(7,1fr)}
+}
+@media (prefers-reduced-motion:reduce){
+  .cell.is-pulsing .ring{animation:none;opacity:1}
+  .ink-row .mini{animation:none;opacity:1;transform:none}
+  .cell{transition:none}
+}
+</style>
+</head>
+<body data-hand="right">
+<div id="app">
+
+  <!-- ===== Start ===== -->
+  <section id="screen-start" class="screen is-active" aria-label="Start">
+    <button class="gear" id="gear" aria-label="Settings for grown-ups" title="Settings for grown-ups">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+    </button>
+    <h1 id="start-title">Trace each letter.</h1>
+    <div class="preview" id="preview" aria-hidden="true"></div>
+    <button class="big-start" id="start-btn" aria-label="Start">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3.5v17l14-8.5z" fill="currentColor"/></svg>
+    </button>
+    <div class="start-label" id="start-label">Start</div>
+  </section>
+
+  <!-- ===== Activity ===== -->
+  <section id="screen-activity" class="screen" aria-label="Activity">
+    <div class="top">
+      <div id="prompt" aria-live="polite"></div>
+      <div id="feedback" aria-live="polite"></div>
+    </div>
+    <div class="work"><div id="cells"></div></div>
+    <div class="bottom">
+      <button class="replay" id="replay" aria-label="Hear it again" title="Hear it again">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5z" fill="currentColor" stroke="none"/><path d="M15.5 8.5a4.5 4.5 0 0 1 0 7"/><path d="M18.5 5.8a8.5 8.5 0 0 1 0 12.4"/></svg>
+      </button>
+      <div class="progress" id="progress" aria-hidden="true"></div>
+    </div>
+  </section>
+
+  <!-- ===== Complete ===== -->
+  <section id="screen-complete" class="screen" aria-label="Finished">
+    <div id="complete-text"></div>
+    <div class="ink-row" id="ink-row"></div>
+    <div class="row">
+      <button class="btn is-primary" id="again-btn">Again</button>
+      <button class="btn" id="done-btn">Done</button>
+    </div>
+    <button class="btn is-quiet results-toggle" id="results-btn">Results for grown-ups</button>
+  </section>
+
+  <!-- ===== Tutor drawer (not child-facing) ===== -->
+  <aside id="tutor" aria-label="Settings for grown-ups">
+    <div class="drawer-head">
+      <h2>Settings for grown-ups</h2>
+      <button class="close" id="tutor-close" aria-label="Close settings">✕</button>
+    </div>
+    <p class="hint">Changes apply to the next run. Share the link below to assign exactly this set.</p>
+
+    <h3>Phase</h3>
+    <div class="seg" id="phase-seg" role="group" aria-label="Phase">
+      <button data-v="model" aria-pressed="false">Model</button>
+      <button data-v="guided" aria-pressed="true">Guided</button>
+      <button data-v="independent" aria-pressed="false">Independent</button>
+    </div>
+    <p class="hint" id="phase-hint"></p>
+
+    <h3>Letters (choose 3 to 7)</h3>
+    <div class="seg" id="case-seg" role="group" aria-label="Letter case">
+      <button data-v="lower" aria-pressed="true">Lower-case</button>
+      <button data-v="upper" aria-pressed="false">Upper-case</button>
+    </div>
+    <p class="hint" id="case-hint"></p>
+    <div class="letters" id="letter-grid" role="group" aria-label="Letters"></div>
+    <p class="hint" id="letter-count"></p>
+    <p class="hint" id="duration-hint"></p>
+
+    <h3>Hand</h3>
+    <div class="seg" id="hand-seg" role="group" aria-label="Handedness">
+      <button data-v="right" aria-pressed="true">Right hand</button>
+      <button data-v="left" aria-pressed="false">Left hand</button>
+    </div>
+    <p class="hint" id="hand-hint">Stroke order and start points are the same for both hands. With "Left hand" set, a crossbar drawn right to left is also accepted.</p>
+
+    <h3>Sound effects</h3>
+    <div class="seg" id="sfx-seg" role="group" aria-label="Sound effects">
+      <button data-v="1" aria-pressed="true">On</button>
+      <button data-v="0" aria-pressed="false">Off</button>
+    </div>
+    <p class="hint">Narration cannot be muted. It can always be replayed with the speaker button.</p>
+
+    <h3>Voice</h3>
+    <div class="field"><select id="voice-select" aria-label="Narration voice"></select><span class="hint" id="voice-hint"></span></div>
+
+    <div class="row" style="justify-content:flex-start;margin-top:14px">
+      <button class="small-btn is-primary" id="apply-btn">Apply and restart</button>
+      <button class="small-btn" id="copy-link-btn">Copy link</button>
+    </div>
+    <div class="field" style="margin-top:10px"><input type="text" id="share-link" readonly aria-label="Link to this configuration"></div>
+
+    <h3>About this activity</h3>
+    <p><b>Corpus entry.</b> ORT-04 · Orthographic Knowledge › Tactile Only › See, Trace › <i>See Letter, Trace Letter</i>.</p>
+    <p><b>Units.</b> Letter Units: Group 1 (lower-case a–z) or Group 2 (upper-case A–Z). Each run uses 3–7 letters of one group. The default set is the circle-first family (c, o, a, d, g), which share one movement.</p>
+    <p><b>The exercise.</b> The child sees one letter with numbered start dots and direction arrows and traces it with a finger or stylus. Tracing is scored on stroke count, order, start point, direction, and staying on the path, not on neatness. A first mistake gets a short line that names it and a demonstration, then another try; a second mistake moves on, and the letter comes back later. No letter name or sound is ever spoken.</p>
+    <p><b>Letterforms.</b> Strokes follow the repository's ball-and-stick convention (v1): b, h, m, n, p, r, u are one stroke that runs back up the stick; a, d, g, q start with the circle. Accepted variants (a lift where the line doubles back, a, d, g, q in one continuous stroke, and a right-to-left crossbar for left-handers) are scored correct and logged.</p>
+    <p><b>What it reports.</b> Per item: unit, outcome and formation sub-state, every stroke's metrics, accepted variants, latency, attempts, hints, and scaffold state. It never decides mastery or what comes next.</p>
+
+    <h3>Open decisions carried in this build</h3>
+    <div class="flag"><b>Narration voice</b>Until recorded narration exists, instructions use the device's built-in speech. Every line is keyed in the narration manifest for recording. Recordings are needed before use with children.</div>
+    <div class="flag"><b>Trace tolerances</b>Finger input uses a slightly looser band than stylus input. Both are starting values to tune on real traces.</div>
+    <div class="flag"><b>Typeface check</b>G, J, M, Q and t are to be compared with the displayed typeface before release (convention HW-10).</div>
+
+    <h3>Manifest</h3>
+    <textarea id="manifest-out" readonly aria-label="Activity manifest"></textarea>
+    <h3>Narration manifest</h3>
+    <textarea id="narration-out" readonly aria-label="Narration manifest"></textarea>
+    <h3>Last results</h3>
+    <textarea id="results-out" readonly aria-label="Results"></textarea>
+    <div class="row" style="justify-content:flex-start;margin-top:8px"><button class="small-btn" id="copy-results-btn">Copy results</button></div>
+  </aside>
+</div>
+
+<!-- ===== Stroke definitions, Group 1 lower-case (TR-7). Copied unchanged from handwriting/strokes-lowercase.json (ball-and-stick convention v1). ===== -->
+<script type="application/json" id="stroke-data">
+{
+  "version": "1.0.0",
+  "font_ref": "ball-and-stick-vertical-manuscript-v1",
+  "convention_note": "Ball-and-stick vertical manuscript adopted for the repository (Activity Corpus, Appendix F decision 1, 2026-10-15). Lower-case: single-story a and g; circle letters start at about 2 o'clock and go counter-clockwise; b, h, m, n, p, r, u are one stroke that retraces up the stem; letters that start with a circle (a, d, g, q) start with the circle, letters that start with a stick (b, p) start with the stick. See the convention document for every rule and accepted variant.",
+  "frame": {"width": 100, "ascender_y": 0, "x_height_y": 50, "baseline_y": 150, "descender_y": 200, "x_height": 100},
+  "dsl": "M x y = start; L x y = line; A cx cy r a0 a1 = circular arc; E cx cy rx ry a0 a1 = elliptical arc. Angles in degrees, y down, 0 = right, 90 = down; increasing angle is clockwise on screen.",
+  "start_hints": {"top": "Start at the top.", "dot": "Start at the dot."},
+  "convention": "Activity Compilation/handwriting/Ball-and-Stick Stroke Convention.md",
+  "letters": {
+    "a": {"strokes": [{"name": "circle", "d": "A 50 100 48 315 -45", "hint": "dot"}, {"name": "stick", "d": "M 98 50 L 98 150", "hint": "top"}], "formation": "Around, then down.", "confusions": {"visual": ["o", "c", "e", "u"], "name": ["j", "k"]}, "accepted_variants": [{"kind": "c-then-up", "note": "A c-curve that pushes up the right side and pulls down (one continuous stroke) is accepted in place of circle, lift, stick."}]},
+    "b": {"strokes": [{"name": "stem-and-bowl", "d": "M 5 0 L 5 150 L 5 50 L 50 50 A 50 100 50 270 450 L 5 150", "hint": "top"}], "formation": "Down, up, and around.", "confusions": {"visual": ["d", "p", "q", "h"], "name": ["d", "p", "v", "e", "t"]}, "accepted_variants": [{"kind": "lift-at-retrace", "note": "Lifting where the path doubles back on itself, then continuing, is accepted (scorer retraceSkip)."}]},
+    "c": {"strokes": [{"name": "curve", "d": "A 50 100 48 315 45", "hint": "dot"}], "formation": "Around.", "confusions": {"visual": ["o", "e", "a", "u"], "name": ["e", "b", "d", "z"]}, "accepted_variants": []},
+    "d": {"strokes": [{"name": "circle", "d": "A 50 100 48 315 -45", "hint": "dot"}, {"name": "stem", "d": "M 98 0 L 98 150", "hint": "top"}], "formation": "Around, then up high and down.", "confusions": {"visual": ["b", "p", "q", "a"], "name": ["b", "p", "t", "e"]}, "accepted_variants": [{"kind": "c-then-up", "note": "A c-curve that pushes up the right side and pulls down (one continuous stroke) is accepted in place of circle, lift, stick."}]},
+    "e": {"strokes": [{"name": "bar-and-curve", "d": "M 2 100 L 98 100 A 50 100 48 0 -315", "hint": "dot"}], "formation": "Across, then around.", "confusions": {"visual": ["c", "o", "a"], "name": ["b", "c", "d", "p"]}, "accepted_variants": []},
+    "f": {"strokes": [{"name": "hook-stem", "d": "A 55 32 30 340 180 L 25 150", "hint": "top"}, {"name": "cross", "d": "M 5 50 L 48 50", "hint": "dot"}], "formation": "Curve down, then across.", "confusions": {"visual": ["t", "r", "j"], "name": ["s", "x", "l", "m", "n"]}, "accepted_variants": [{"kind": "crossbar-right-to-left", "note": "For learners set to left-handed, a crossbar drawn right to left is accepted."}]},
+    "g": {"strokes": [{"name": "circle", "d": "A 50 100 48 315 -45", "hint": "dot"}, {"name": "tail", "d": "M 98 50 L 98 165 A 63 165 35 0 180", "hint": "top"}], "formation": "Around, down, then hook.", "confusions": {"visual": ["q", "y", "a", "p"], "name": ["j", "b", "d"]}, "accepted_variants": [{"kind": "c-then-up", "note": "A c-curve that pushes up the right side and pulls down (one continuous stroke) is accepted in place of circle, lift, stick."}]},
+    "h": {"strokes": [{"name": "stem-and-hump", "d": "M 5 0 L 5 150 L 5 85 E 50 85 45 35 180 360 L 95 150", "hint": "top"}], "formation": "Down, up, and over.", "confusions": {"visual": ["n", "b", "k"], "name": ["a", "k"]}, "accepted_variants": [{"kind": "lift-at-retrace", "note": "Lifting where the path doubles back on itself, then continuing, is accepted (scorer retraceSkip)."}]},
+    "i": {"strokes": [{"name": "stem", "d": "M 50 50 L 50 150", "hint": "top"}, {"name": "dot", "d": "M 50 22 L 50 28", "hint": "dot"}], "formation": "Down, then dot.", "confusions": {"visual": ["j", "l", "t"], "name": ["y"]}, "accepted_variants": []},
+    "j": {"strokes": [{"name": "stem-hook", "d": "M 60 50 L 60 165 A 30 165 30 0 180", "hint": "top"}, {"name": "dot", "d": "M 60 22 L 60 28", "hint": "dot"}], "formation": "Down, hook, then dot.", "confusions": {"visual": ["i", "g", "y"], "name": ["g", "a", "k"]}, "accepted_variants": []},
+    "k": {"strokes": [{"name": "stem", "d": "M 5 0 L 5 150", "hint": "top"}, {"name": "in-out", "d": "M 70 55 L 5 108 L 75 150", "hint": "dot"}], "formation": "Down, then in and out.", "confusions": {"visual": ["h", "x", "y"], "name": ["a", "j"]}, "accepted_variants": []},
+    "l": {"strokes": [{"name": "stem", "d": "M 50 0 L 50 150", "hint": "top"}], "formation": "Down.", "confusions": {"visual": ["i", "t", "j"], "name": ["m", "n", "f", "s"]}, "accepted_variants": []},
+    "m": {"strokes": [{"name": "stem-and-humps", "d": "M 5 50 L 5 150 L 5 85 E 28 85 23 35 180 360 L 51 150 L 51 85 E 74 85 23 35 180 360 L 97 150", "hint": "top"}], "formation": "Down, up, over, up, over.", "confusions": {"visual": ["n", "w", "u"], "name": ["n", "l", "f"]}, "accepted_variants": [{"kind": "lift-at-retrace", "note": "Lifting where the path doubles back on itself, then continuing, is accepted (scorer retraceSkip)."}]},
+    "n": {"strokes": [{"name": "stem-and-hump", "d": "M 5 50 L 5 150 L 5 85 E 50 85 45 35 180 360 L 95 150", "hint": "top"}], "formation": "Down, up, and over.", "confusions": {"visual": ["m", "h", "u", "r"], "name": ["m", "l", "f"]}, "accepted_variants": [{"kind": "lift-at-retrace", "note": "Lifting where the path doubles back on itself, then continuing, is accepted (scorer retraceSkip)."}]},
+    "o": {"strokes": [{"name": "circle", "d": "A 50 100 48 315 -45", "hint": "dot"}], "formation": "Around.", "confusions": {"visual": ["a", "c", "e", "u"], "name": ["u", "w"]}, "accepted_variants": []},
+    "p": {"strokes": [{"name": "stem-and-bowl", "d": "M 5 50 L 5 200 L 5 50 L 50 50 A 50 100 50 270 450 L 5 150", "hint": "top"}], "formation": "Down low, up, and around.", "confusions": {"visual": ["q", "b", "d", "g"], "name": ["b", "d", "t", "v"]}, "accepted_variants": [{"kind": "lift-at-retrace", "note": "Lifting where the path doubles back on itself, then continuing, is accepted (scorer retraceSkip)."}]},
+    "q": {"strokes": [{"name": "circle", "d": "A 50 100 48 315 -45", "hint": "dot"}, {"name": "stem", "d": "M 98 50 L 98 200", "hint": "top"}], "formation": "Around, then down low.", "confusions": {"visual": ["p", "g", "d", "b"], "name": ["u", "w", "k"]}, "accepted_variants": [{"kind": "c-then-up", "note": "A c-curve that pushes up the right side and pulls down (one continuous stroke) is accepted in place of circle, lift, stick."}]},
+    "r": {"strokes": [{"name": "stem-and-arm", "d": "M 5 50 L 5 150 L 5 85 E 45 85 40 35 180 330", "hint": "top"}], "formation": "Down, up, and over.", "confusions": {"visual": ["n", "f", "v"], "name": ["o", "a"]}, "accepted_variants": [{"kind": "lift-at-retrace", "note": "Lifting where the path doubles back on itself, then continuing, is accepted (scorer retraceSkip)."}]},
+    "s": {"strokes": [{"name": "curves", "d": "A 50 75 25 330 90 A 50 125 25 270 510", "hint": "dot"}], "formation": "Curve, then curve back.", "confusions": {"visual": ["z", "c", "e"], "name": ["f", "x", "m", "n"]}, "accepted_variants": []},
+    "t": {"strokes": [{"name": "stem", "d": "M 50 15 L 50 150", "hint": "top"}, {"name": "cross", "d": "M 25 50 L 75 50", "hint": "dot"}], "formation": "Down, then across.", "confusions": {"visual": ["f", "l", "i", "j"], "name": ["d", "b", "p", "v"]}, "accepted_variants": [{"kind": "crossbar-right-to-left", "note": "For learners set to left-handed, a crossbar drawn right to left is accepted."}]},
+    "u": {"strokes": [{"name": "cup", "d": "M 5 50 L 5 105 A 50 105 45 180 0 L 95 50 L 95 150", "hint": "top"}], "formation": "Down, around, up, down.", "confusions": {"visual": ["n", "v", "y", "o"], "name": ["q", "w"]}, "accepted_variants": [{"kind": "lift-at-retrace", "note": "Lifting where the path doubles back on itself, then continuing, is accepted (scorer retraceSkip)."}]},
+    "v": {"strokes": [{"name": "vee", "d": "M 5 50 L 50 150 L 95 50", "hint": "top"}], "formation": "Slant down, slant up.", "confusions": {"visual": ["u", "w", "y", "x"], "name": ["b", "d", "p", "t"]}, "accepted_variants": []},
+    "w": {"strokes": [{"name": "zigzag", "d": "M 2 50 L 26 150 L 50 50 L 74 150 L 98 50", "hint": "top"}], "formation": "Down, up, down, up.", "confusions": {"visual": ["v", "m", "u"], "name": ["u", "q"]}, "accepted_variants": []},
+    "x": {"strokes": [{"name": "slant", "d": "M 5 50 L 95 150", "hint": "top"}, {"name": "slant-back", "d": "M 95 50 L 5 150", "hint": "top"}], "formation": "Slant, then slant.", "confusions": {"visual": ["k", "y", "v", "z"], "name": ["s", "f"]}, "accepted_variants": []},
+    "y": {"strokes": [{"name": "slant", "d": "M 5 50 L 50 150", "hint": "top"}, {"name": "long-slant", "d": "M 95 50 L 28 200", "hint": "top"}], "formation": "Slant, then long slant.", "confusions": {"visual": ["v", "g", "j", "u"], "name": ["i"]}, "accepted_variants": []},
+    "z": {"strokes": [{"name": "zed", "d": "M 5 50 L 95 50 L 5 150 L 95 150", "hint": "top"}], "formation": "Across, slant, across.", "confusions": {"visual": ["s", "n", "x"], "name": ["c", "b", "d", "e"]}, "accepted_variants": []}
+  }
+}
+</script>
+
+<!-- ===== Stroke definitions, Group 2 upper-case (TR-7). Copied unchanged from handwriting/strokes-uppercase.json. Keys are lower-case; the page maps case at render time. ===== -->
+<script type="application/json" id="stroke-data-upper">
+{
+  "version": "1.0.0",
+  "font_ref": "ball-and-stick-vertical-manuscript-v1",
+  "convention_note": "Ball-and-stick vertical manuscript adopted for the repository (Activity Corpus, Appendix F decision 1, 2026-10-15). Capitals fill y 0..150. Start at the top; a vertical stem comes first and is its own stroke; what follows the stem starts at the top of the stem and continues without a lift where the path is unbroken (B, D, K, M, N, P, R); round letters go counter-clockwise from about 2 o'clock. Keys are lower-case; the page maps case at render time. See the convention document.",
+  "frame": {"width": 100, "ascender_y": 0, "x_height_y": 50, "baseline_y": 150, "descender_y": 200, "x_height": 100},
+  "dsl": "M x y = start; L x y = line; A cx cy r a0 a1 = circular arc; E cx cy rx ry a0 a1 = elliptical arc. Angles in degrees, y down, 0 = right, 90 = down; increasing angle is clockwise on screen.",
+  "start_hints": {"top": "Start at the top.", "dot": "Start at the dot."},
+  "convention": "Activity Compilation/handwriting/Ball-and-Stick Stroke Convention.md",
+  "letters": {
+    "a": {"strokes": [{"name": "left-slant", "d": "M 50 0 L 5 150", "hint": "top"}, {"name": "right-slant", "d": "M 50 0 L 95 150", "hint": "top"}, {"name": "cross", "d": "M 20 100 L 80 100", "hint": "dot"}], "formation": "Slant, slant, then across.", "confusions": {"visual": ["h", "v", "r"], "name": ["j", "k"]}, "accepted_variants": [{"kind": "crossbar-right-to-left", "note": "For learners set to left-handed, a crossbar drawn right to left is accepted."}]},
+    "b": {"strokes": [{"name": "stem", "d": "M 5 0 L 5 150", "hint": "top"}, {"name": "bowls", "d": "M 5 0 L 40 0 E 40 38 36 38 270 450 L 5 76 L 42 76 E 42 113 44 37 270 450 L 5 150", "hint": "top"}], "formation": "Down, then around, around.", "confusions": {"visual": ["d", "p", "r"], "name": ["d", "p", "v", "e", "t"]}, "accepted_variants": []},
+    "c": {"strokes": [{"name": "curve", "d": "E 50 75 45 73 315 45", "hint": "dot"}], "formation": "Around.", "confusions": {"visual": ["g", "o", "q"], "name": ["e", "b", "d", "z"]}, "accepted_variants": []},
+    "d": {"strokes": [{"name": "stem", "d": "M 5 0 L 5 150", "hint": "top"}, {"name": "bowl", "d": "M 5 0 L 30 0 E 30 75 65 75 270 450 L 5 150", "hint": "top"}], "formation": "Down, then around.", "confusions": {"visual": ["b", "o", "p"], "name": ["b", "p", "t", "e"]}, "accepted_variants": []},
+    "e": {"strokes": [{"name": "stem", "d": "M 5 0 L 5 150", "hint": "top"}, {"name": "top-bar", "d": "M 5 0 L 90 0", "hint": "top"}, {"name": "middle-bar", "d": "M 5 75 L 75 75", "hint": "dot"}, {"name": "bottom-bar", "d": "M 5 150 L 90 150", "hint": "dot"}], "formation": "Down, across, across, across.", "confusions": {"visual": ["f", "b"], "name": ["b", "c", "d", "p"]}, "accepted_variants": [{"kind": "crossbar-right-to-left", "note": "For learners set to left-handed, a crossbar drawn right to left is accepted."}]},
+    "f": {"strokes": [{"name": "stem", "d": "M 5 0 L 5 150", "hint": "top"}, {"name": "top-bar", "d": "M 5 0 L 90 0", "hint": "top"}, {"name": "middle-bar", "d": "M 5 75 L 75 75", "hint": "dot"}], "formation": "Down, across, across.", "confusions": {"visual": ["e", "p", "t"], "name": ["s", "x", "l", "m", "n"]}, "accepted_variants": [{"kind": "crossbar-right-to-left", "note": "For learners set to left-handed, a crossbar drawn right to left is accepted."}]},
+    "g": {"strokes": [{"name": "curve", "d": "E 50 75 45 73 315 10", "hint": "dot"}, {"name": "bar-in", "d": "M 95 88 L 55 88", "hint": "dot"}], "formation": "Around, then in.", "confusions": {"visual": ["c", "o", "q"], "name": ["j", "b", "d"]}, "accepted_variants": []},
+    "h": {"strokes": [{"name": "left-stem", "d": "M 5 0 L 5 150", "hint": "top"}, {"name": "right-stem", "d": "M 95 0 L 95 150", "hint": "top"}, {"name": "cross", "d": "M 5 75 L 95 75", "hint": "dot"}], "formation": "Down, down, then across.", "confusions": {"visual": ["n", "m", "a"], "name": ["a", "k"]}, "accepted_variants": [{"kind": "crossbar-right-to-left", "note": "For learners set to left-handed, a crossbar drawn right to left is accepted."}]},
+    "i": {"strokes": [{"name": "stem", "d": "M 50 0 L 50 150", "hint": "top"}, {"name": "top-bar", "d": "M 25 0 L 75 0", "hint": "top"}, {"name": "bottom-bar", "d": "M 25 150 L 75 150", "hint": "dot"}], "formation": "Down, across, across.", "confusions": {"visual": ["l", "t", "j"], "name": ["y"]}, "accepted_variants": [{"kind": "crossbar-right-to-left", "note": "For learners set to left-handed, a crossbar drawn right to left is accepted."}]},
+    "j": {"strokes": [{"name": "stem-hook", "d": "M 65 0 L 65 120 A 42 120 23 0 150", "hint": "top"}], "formation": "Down, then hook.", "confusions": {"visual": ["i", "l", "u"], "name": ["g", "a", "k"]}, "accepted_variants": []},
+    "k": {"strokes": [{"name": "stem", "d": "M 5 0 L 5 150", "hint": "top"}, {"name": "in-and-out", "d": "M 85 0 L 5 85 L 90 150", "hint": "dot"}], "formation": "Down, then in and out.", "confusions": {"visual": ["x", "r"], "name": ["a", "j"]}, "accepted_variants": [{"kind": "lift-at-vertex", "note": "Lifting at the stem between the in and out slants is accepted."}]},
+    "l": {"strokes": [{"name": "stem", "d": "M 5 0 L 5 150", "hint": "top"}, {"name": "bottom-bar", "d": "M 5 150 L 90 150", "hint": "dot"}], "formation": "Down, then across.", "confusions": {"visual": ["i", "e", "j"], "name": ["m", "n", "f", "s"]}, "accepted_variants": []},
+    "m": {"strokes": [{"name": "left-stem", "d": "M 5 0 L 5 150", "hint": "top"}, {"name": "slants-and-stem", "d": "M 5 0 L 50 110 L 95 0 L 95 150", "hint": "dot"}], "formation": "Down, then slant down, slant up, down.", "confusions": {"visual": ["n", "w"], "name": ["n", "l", "f"]}, "accepted_variants": [{"kind": "lift-at-vertex", "note": "Lifting at the point or at the top right corner is accepted."}]},
+    "n": {"strokes": [{"name": "left-stem", "d": "M 5 0 L 5 150", "hint": "top"}, {"name": "slant-and-stem", "d": "M 5 0 L 95 150 L 95 0", "hint": "dot"}], "formation": "Down, then slant down, up.", "confusions": {"visual": ["m", "h"], "name": ["m", "l", "f"]}, "accepted_variants": [{"kind": "lift-at-vertex", "note": "Lifting at the bottom right corner is accepted."}]},
+    "o": {"strokes": [{"name": "circle", "d": "E 50 75 45 73 315 -45", "hint": "dot"}], "formation": "Around.", "confusions": {"visual": ["q", "c", "g", "d"], "name": ["u", "w"]}, "accepted_variants": []},
+    "p": {"strokes": [{"name": "stem", "d": "M 5 0 L 5 150", "hint": "top"}, {"name": "bowl", "d": "M 5 0 L 42 0 E 42 40 45 40 270 450 L 5 80", "hint": "top"}], "formation": "Down, then around.", "confusions": {"visual": ["b", "r"], "name": ["b", "d", "t", "v"]}, "accepted_variants": []},
+    "q": {"strokes": [{"name": "circle", "d": "E 50 75 45 73 315 -45", "hint": "dot"}, {"name": "tail", "d": "M 62 120 L 88 165", "hint": "dot"}], "formation": "Around, then slant.", "confusions": {"visual": ["o", "g"], "name": ["u", "w", "k"]}, "accepted_variants": []},
+    "r": {"strokes": [{"name": "stem", "d": "M 5 0 L 5 150", "hint": "top"}, {"name": "bowl-and-leg", "d": "M 5 0 L 42 0 E 42 40 45 40 270 450 L 5 80 L 90 150", "hint": "dot"}], "formation": "Down, then around and slant.", "confusions": {"visual": ["p", "b", "k"], "name": ["o", "a"]}, "accepted_variants": [{"kind": "lift-at-vertex", "note": "Lifting where the bowl meets the stem, then drawing the leg, is accepted."}]},
+    "s": {"strokes": [{"name": "curves", "d": "E 50 36 36 36 330 90 E 50 111 41 39 270 510", "hint": "dot"}], "formation": "Curve, then curve back.", "confusions": {"visual": ["z", "c"], "name": ["f", "x", "m", "n"]}, "accepted_variants": []},
+    "t": {"strokes": [{"name": "stem", "d": "M 50 0 L 50 150", "hint": "top"}, {"name": "top-bar", "d": "M 5 0 L 95 0", "hint": "top"}], "formation": "Down, then across.", "confusions": {"visual": ["i", "f", "l"], "name": ["d", "b", "p", "v"]}, "accepted_variants": [{"kind": "crossbar-right-to-left", "note": "For learners set to left-handed, a crossbar drawn right to left is accepted."}]},
+    "u": {"strokes": [{"name": "cup", "d": "M 5 0 L 5 105 A 50 105 45 180 0 L 95 0", "hint": "top"}], "formation": "Down, around, then up.", "confusions": {"visual": ["v", "y"], "name": ["q", "w"]}, "accepted_variants": []},
+    "v": {"strokes": [{"name": "vee", "d": "M 5 0 L 50 150 L 95 0", "hint": "top"}], "formation": "Slant down, slant up.", "confusions": {"visual": ["u", "y", "w"], "name": ["b", "d", "p", "t"]}, "accepted_variants": [{"kind": "lift-at-vertex", "note": "Lifting at the point is accepted."}]},
+    "w": {"strokes": [{"name": "zigzag", "d": "M 2 0 L 26 150 L 50 0 L 74 150 L 98 0", "hint": "top"}], "formation": "Down, up, down, up.", "confusions": {"visual": ["m", "v", "u"], "name": ["u", "q"]}, "accepted_variants": [{"kind": "lift-at-vertex", "note": "Lifting at any point is accepted."}]},
+    "x": {"strokes": [{"name": "slant", "d": "M 5 0 L 95 150", "hint": "top"}, {"name": "slant-back", "d": "M 95 0 L 5 150", "hint": "top"}], "formation": "Slant, then slant.", "confusions": {"visual": ["k", "y", "v"], "name": ["s", "f"]}, "accepted_variants": []},
+    "y": {"strokes": [{"name": "left-slant", "d": "M 5 0 L 50 75", "hint": "top"}, {"name": "right-slant-and-stem", "d": "M 95 0 L 50 75 L 50 150", "hint": "dot"}], "formation": "Slant, then slant and down.", "confusions": {"visual": ["v", "x", "u"], "name": ["i"]}, "accepted_variants": [{"kind": "lift-at-vertex", "note": "Three strokes (slant, slant, down) are accepted."}]},
+    "z": {"strokes": [{"name": "zed", "d": "M 5 0 L 95 0 L 5 150 L 95 150", "hint": "top"}], "formation": "Across, slant, across.", "confusions": {"visual": ["s", "n"], "name": ["c", "b", "d", "e"]}, "accepted_variants": []}
+  }
+}
+</script>
+
+<!-- ===== Narration templates (NA-10). Expanded at load into one complete utterance per key, never concatenated (NA-7).
+     Content rule: no line says a letter name or a letter sound (Tactile Only). Formation and stroke-count lines are keyed per case glyph. ===== -->
+<script type="application/json" id="narration-templates">
+{
+  "version": "1.0.0",
+  "voice_spec": {"register": "one warm, unhurried adult voice", "rate": "10-15% slower than conversational", "intonation": "falling on instructions, never quiz-show", "review": "every take reviewed so it never sounds disappointed, surprised, or impatient (TN-6)"},
+  "content_rule": "No line says a letter name or a letter sound. ORT-04 is Tactile Only; the letter is pointed to with 'this one' and its movement is described with the convention's cue words (HW-12).",
+  "asset_base": null,
+  "asset_pattern": "narration/{key}.mp3",
+  "count_words": {"2": "Two", "3": "Three", "4": "Four"},
+  "utterances": [
+    {"key": "intro.guided", "text": "Trace each letter.", "contexts": ["intro:guided", "intro:independent"]},
+    {"key": "intro.model", "text": "Watch, then trace.", "contexts": ["intro:model"]},
+    {"key": "resume", "text": "Let's keep going.", "contexts": ["resume"]},
+    {"key": "prompt.trace", "text": "Trace the letter.", "contexts": ["prompt:trace", "replay", "reprompt:timeout", "model:handoff-text"]},
+    {"key": "formation", "per_case_letter": true, "text": "{formation}", "contexts": ["model:animate", "feedback:wrong-direction", "feedback:scribble", "intervention:together"]},
+    {"key": "strokes", "per_case_letter": true, "multi_stroke_only": true, "text": "{count} strokes: {formation_lc}", "contexts": ["feedback:wrong-order", "feedback:missing-lift"]},
+    {"key": "watch", "text": "Watch.", "contexts": ["model:start", "feedback:wrong-direction"]},
+    {"key": "together", "text": "Let's do it together.", "contexts": ["intervention:consecutive-errors"]},
+    {"key": "yourturn", "text": "Your turn.", "contexts": ["model:handoff", "intervention:handoff"]},
+    {"key": "start.top", "text": "This one starts at the top.", "contexts": ["feedback:wrong-start"]},
+    {"key": "start.dot", "text": "This one starts at the dot.", "contexts": ["feedback:wrong-start"]},
+    {"key": "draw", "text": "Let's draw it.", "contexts": ["feedback:scribble"]},
+    {"key": "stay", "text": "Stay on the letter.", "contexts": ["feedback:off-path"]},
+    {"key": "keepgoing", "text": "Keep going.", "contexts": ["idle:nudge"]},
+    {"key": "later", "text": "We'll do that one again later.", "contexts": ["item:reattempt-failed"]},
+    {"key": "complete.3", "text": "That's all three.", "contexts": ["complete"]},
+    {"key": "complete.4", "text": "That's all four.", "contexts": ["complete"]},
+    {"key": "complete.5", "text": "That's all five.", "contexts": ["complete"]},
+    {"key": "complete.6", "text": "That's all six.", "contexts": ["complete"]},
+    {"key": "complete.7", "text": "That's all seven.", "contexts": ["complete"]},
+    {"key": "complete.partial", "text": "That's it for now.", "contexts": ["complete:ceiling", "complete:not-all-correct"]}
+  ]
+}
+</script>
+
+<!-- ===== Activity manifest (RP-2). buildManifest fills id (group and phase), unit_case, unit_group, unit_pool, units, unit_count, assets and est_duration_sec from the configuration. ===== -->
+<script type="application/json" id="activity-manifest">
+{
+  "id": "orth-see-trace-letters-g1-guided",
+  "id_pattern": "orth-see-trace-letters-{group}-{phase}",
+  "version": "1.0.0",
+  "corpus_entry": "Orthographic Knowledge › Tactile Only › See, Trace › See Letter, Trace Letter",
+  "corpus_entry_id": "ORT-04",
+  "corpus_deviations": [],
+  "build_flags": [
+    {
+      "rule": "NA-6",
+      "status": "open",
+      "note": "Narration by device speech synthesis until pre-generated voice assets exist; every line keyed in narration-manifest.json; set asset_base to switch. Delivery mode stamped on every record. Recordings needed before use with children."
+    },
+    {
+      "rule": "TR-9 / Appendix F decision 1",
+      "status": "resolved",
+      "note": "Strokes from the repository's ball-and-stick convention files (handwriting/strokes-lowercase.json, strokes-uppercase.json, convention v1), copied unchanged. b h m n p r u are one stroke with a retrace; a d g q start with the circle."
+    },
+    {
+      "rule": "HW-11 (convention §6.4)",
+      "status": "resolved",
+      "note": "Accepted variants scored correct and stamped on the item (variants[]): lift-at-retrace and lift-at-vertex (continuation after a lift), c-then-up (a d g q in one continuous stroke), crossbar-right-to-left (left-hand setting only)."
+    },
+    {
+      "rule": "HW-10 / TR-8",
+      "status": "open",
+      "note": "G, J, M, Q and t still to be compared with the displayed typeface (Andika) before release."
+    },
+    {
+      "rule": "TR-3",
+      "status": "default",
+      "note": "Tolerances as the earlier tracing activities: stylus mean 15% / max 30% / start 20% of x-height; finger and mouse 18% / 40% / 22%. Tune on real traces."
+    },
+    {
+      "rule": "TR-16",
+      "status": "default",
+      "note": "Single cell: letter x-height about 32% of the short viewport side in landscape on a 1280×800 tablet. The page measures the actual fraction at run time (cell_fraction in the result)."
+    },
+    {
+      "rule": "corpus-evaluation",
+      "status": "resolved",
+      "note": "Corpus scores 'directionality and area, success >80%', applied as Standard E-TRACE. Coverage >= 80% is necessary, motion criteria decide (Vision TR-1)."
+    },
+    {
+      "rule": "default-units",
+      "status": "proposed",
+      "note": "Default set is the circle-first formation family c, o, a, d, g (convention §5), not b d p m s as in the other letter activities; the convention says to keep b and d apart until each is formed correctly. Confirm."
+    }
+  ],
+  "target_skill": "letter formation: correct stroke count, order, start point and direction for a seen letter-symbol",
+  "domain": "orthographic",
+  "phase": "guided",
+  "supported_phases": [
+    "model",
+    "guided",
+    "independent"
+  ],
+  "unit_type": "letter",
+  "unit_group": "Letter Units: Group 1 (lower-case a-z)",
+  "unit_groups_supported": {
+    "g1": "Letter Units: Group 1 (lower-case a-z)",
+    "g2": "Letter Units: Group 2 (upper-case A-Z)"
+  },
+  "unit_case": "lower",
+  "unit_pool": [
+    "a",
+    "b",
+    "c",
+    "d",
+    "e",
+    "f",
+    "g",
+    "h",
+    "i",
+    "j",
+    "k",
+    "l",
+    "m",
+    "n",
+    "o",
+    "p",
+    "q",
+    "r",
+    "s",
+    "t",
+    "u",
+    "v",
+    "w",
+    "x",
+    "y",
+    "z"
+  ],
+  "units": [
+    "c",
+    "o",
+    "a",
+    "d",
+    "g"
+  ],
+  "unit_count": 5,
+  "grade_level_equivalent": "Early K",
+  "modalities": [
+    "visual",
+    "tactile"
+  ],
+  "instruction_modality": "auditory (narrated instructions and movement words only; no letter name or sound is spoken)",
+  "response_modes": [
+    "trace"
+  ],
+  "fallback_response_modes": [],
+  "evaluation": "Standard E-TRACE: correct stroke count, order, start points and direction, within path tolerance, with at least 80% of the canonical path covered; fill-and-scribble rejected (Vision TR-1 – TR-5)",
+  "attempts_per_item": 2,
+  "prerequisites": [],
+  "est_duration_sec": 70,
+  "max_duration_sec": 180,
+  "band_default": "K-1",
+  "narration_manifest": "narration-manifest.json",
+  "assets": [
+    "strokes-lowercase.json"
+  ],
+  "stroke_convention": "handwriting/Ball-and-Stick Stroke Convention.md (v1.0)",
+  "telemetry_schema": "v1",
+  "requires_microphone": false,
+  "requires_stylus": false,
+  "inputs": {
+    "url_params": {
+      "phase": "model|guided|independent",
+      "units": "3-7 letters of the unit pool, either case",
+      "case": "lower|upper",
+      "hand": "right|left",
+      "sfx": "1|0",
+      "seed": "integer",
+      "scaffold": "0|1|2 (independent)",
+      "parent_origin": "origin for postMessage"
+    },
+    "outputs": [
+      "window event 'activity:item'",
+      "window event 'activity:result'",
+      "postMessage {type:'activity:result'} to parent_origin or the referrer origin",
+      "localStorage activity-results:<id>"
+    ]
+  }
+}
+</script>
+<script>
+'use strict';
+/* =====================================================================
+   1. Utilities
+   ===================================================================== */
+const $  = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+const now = () => performance.now();
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
+function mulberry32(seed) {
+  let t = seed >>> 0;
+  return function () {
+    t += 0x6D2B79F5;
+    let r = Math.imul(t ^ (t >>> 15), 1 | t);
+    r ^= r + Math.imul(r ^ (r >>> 7), 61 | r);
+    return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
+  };
+}
+let rng = Math.random;
+function shuffle(arr) { const a = arr.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+function pick(arr) { return arr[Math.floor(rng() * arr.length)]; }
+function readJSON(id) { const n = document.getElementById(id); if (!n) return null; try { return JSON.parse(n.textContent); } catch (e) { console.error('bad JSON block', id, e); return null; } }
+function safeStore(kind, key, value) { try { const s = kind === 'session' ? sessionStorage : localStorage; if (value === undefined) return JSON.parse(s.getItem(key)); if (value === null) { s.removeItem(key); return null; } s.setItem(key, JSON.stringify(value)); return value; } catch (e) { return null; } }
+
+/* =====================================================================
+   2. Stroke geometry (TR-7). One frame for every letter: width 100,
+      ascender y=0, x-height y=50, baseline y=150, descender y=200.
+      Two blocks: lower-case (Group 1) and upper-case (Group 2), both from
+      the repository's ball-and-stick convention files.
+   ===================================================================== */
+const STROKE_DATA       = readJSON('stroke-data');
+const STROKE_DATA_UPPER = readJSON('stroke-data-upper');
+const NARR_T            = readJSON('narration-templates');
+const MANIFEST_BASE     = readJSON('activity-manifest');
+const XH = STROKE_DATA.frame.x_height;   // 100 units
+const SAMPLE = 2;                        // resample spacing in letter units
+
+function parseDSL(d) {
+  const t = d.trim().split(/\s+/); let i = 0; const pts = [];
+  const push = (x, y) => { const l = pts[pts.length - 1]; if (!l || Math.hypot(l[0] - x, l[1] - y) > 0.01) pts.push([x, y]); };
+  while (i < t.length) {
+    const c = t[i++];
+    if (c === 'M' || c === 'L') { push(+t[i++], +t[i++]); }
+    else if (c === 'A' || c === 'E') {
+      const cx = +t[i++], cy = +t[i++], rx = +t[i++], ry = (c === 'E') ? +t[i++] : rx, a0 = +t[i++], a1 = +t[i++];
+      const n = Math.max(4, Math.ceil(Math.abs(a1 - a0) / 6));
+      for (let k = 0; k <= n; k++) { const a = (a0 + (a1 - a0) * k / n) * Math.PI / 180; push(cx + rx * Math.cos(a), cy + ry * Math.sin(a)); }
+    }
+  }
+  return pts;
+}
+function pathLength(pts) { let L = 0; for (let i = 1; i < pts.length; i++) L += dist(pts[i - 1], pts[i]); return L; }
+function resample(pts, step) {
+  const out = [[pts[0][0], pts[0][1]]]; let need = step;
+  for (let i = 1; i < pts.length; i++) {
+    let x0 = pts[i - 1][0], y0 = pts[i - 1][1]; const x1 = pts[i][0], y1 = pts[i][1];
+    let seg = Math.hypot(x1 - x0, y1 - y0);
+    while (seg >= need && seg > 0) { const u = need / seg; x0 += (x1 - x0) * u; y0 += (y1 - y0) * u; out.push([x0, y0]); seg -= need; need = step; }
+    need -= seg;
+  }
+  const last = pts[pts.length - 1], o = out[out.length - 1];
+  if (Math.hypot(o[0] - last[0], o[1] - last[1]) > 1e-6) out.push([last[0], last[1]]);
+  return out;
+}
+function pointAtFraction(pts, f) {
+  const total = pathLength(pts); let target = total * f;
+  for (let i = 1; i < pts.length; i++) {
+    const seg = dist(pts[i - 1], pts[i]);
+    if (target <= seg || i === pts.length - 1) {
+      const u = seg ? clamp(target / seg, 0, 1) : 0;
+      const p = [pts[i - 1][0] + (pts[i][0] - pts[i - 1][0]) * u, pts[i - 1][1] + (pts[i][1] - pts[i - 1][1]) * u];
+      const angle = Math.atan2(pts[i][1] - pts[i - 1][1], pts[i][0] - pts[i - 1][0]) * 180 / Math.PI;
+      return { p, angle };
+    }
+    target -= seg;
+  }
+  return { p: pts[pts.length - 1], angle: 0 };
+}
+function nearestIndex(pt, C) { let bi = 0, bd = Infinity; for (let j = 0; j < C.length; j++) { const d = dist(pt, C[j]); if (d < bd) { bd = d; bi = j; } } return { idx: bi, d: bd }; }
+function polyToPath(pts) { return pts.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' '); }
+function dotPath(s) { const [x, y] = s.start; return `M ${x} ${y - 2} L ${x} ${y + 3}`; }
+function nearestDist(pt, C) { let bd = Infinity; for (const q of C) { const d = dist(pt, q); if (d < bd) bd = d; } return bd; }
+
+/* Direction arrows, one per movement (TR-10). A stroke is split where the path doubles back on itself
+   (the retrace in b h m n p r u, the points of v w M N). A movement that runs back over its own earlier
+   line gets its arrow set just beside that line, as on the convention's stroke sheets, so the down and
+   the up arrows of a retrace both show. */
+function arrowsFor(raw) {
+  const cuts = [0];
+  for (let i = 1; i < raw.length - 1; i++) {
+    const ax = raw[i][0] - raw[i - 1][0], ay = raw[i][1] - raw[i - 1][1], bx = raw[i + 1][0] - raw[i][0], by = raw[i + 1][1] - raw[i][1];
+    const la = Math.hypot(ax, ay), lb = Math.hypot(bx, by); if (!la || !lb) continue;
+    if ((ax * bx + ay * by) / (la * lb) < -0.5) cuts.push(i);
+  }
+  cuts.push(raw.length - 1);
+  const out = [];
+  const place = (pts, fracs, offset) => { for (const f of fracs) { const a = pointAtFraction(pts, f); if (offset) { const r = a.angle * Math.PI / 180; a.p = [a.p[0] - Math.sin(r) * 10, a.p[1] + Math.cos(r) * 10]; } out.push(a); } };
+  for (let c = 0; c < cuts.length - 1; c++) {
+    const piece = resample(raw.slice(cuts[c], cuts[c + 1] + 1), SAMPLE);
+    const earlier = c > 0 ? resample(raw.slice(0, cuts[c] + 1), SAMPLE) : [];
+    let k = 0; if (earlier.length > 1) while (k < piece.length && nearestDist(piece[k], earlier) < 4) k++;
+    const retraceLen = k * SAMPLE;
+    if (retraceLen >= 30) { place(piece.slice(0, k), [0.5], true); if (k < piece.length - 1) { const rest = piece.slice(k - 1); const L = pathLength(rest); if (L >= 20) place(rest, L > 160 ? [0.3, 0.72] : [0.5], false); } continue; }
+    const L = pathLength(piece); if (L < 20) continue;
+    place(piece, L > 160 ? [0.3, 0.72] : [0.5], false);
+  }
+  return out;
+}
+
+/* Unit ids are lower-case letters everywhere in data; the glyph shown is the run-case form. */
+function buildStroke(s, idx) {
+  const raw = parseDSL(s.d); const len = pathLength(raw); const isDot = len < 15;
+  const pts = isDot ? raw : resample(raw, SAMPLE);
+  return { idx, name: s.name, hint: s.hint || 'dot', raw, pts, len, isDot, start: raw[0], end: raw[raw.length - 1], arrows: isDot ? [] : arrowsFor(raw), d: isDot ? null : polyToPath(raw) };
+}
+function buildLetter(ch, def, kase) {
+  const strokes = def.strokes.map(buildStroke);
+  const conf = def.confusions || {};
+  const variants = (def.accepted_variants || []).map(v => v.kind);
+  const L = { ch, glyph: kase === 'upper' ? ch.toUpperCase() : ch, kase, strokes, totalLen: strokes.reduce((a, s) => a + s.len, 0), formation: def.formation || '', cv: (conf.visual || []).map(x => x.toLowerCase()), variants, alt: {} };
+  /* HW-6 c-then-up (a d g q): one continuous stroke, the circle stopping at 3 o'clock, pushing up the
+     right side and pulling down, in place of circle, lift, stick. Built from the letter's own two strokes. */
+  if (variants.includes('c-then-up')) {
+    const m = /^A (\S+) (\S+) (\S+) (\S+) (\S+)$/.exec((def.strokes[0].d || '').trim());
+    if (m && def.strokes[1]) L.alt['c-then-up'] = { ch, glyph: L.glyph, kase, strokes: [buildStroke({ name: 'c-then-up', d: `A ${m[1]} ${m[2]} ${m[3]} ${m[4]} 0 ` + def.strokes[1].d.trim().replace(/^M/, 'L'), hint: 'dot' }, 0)] };
+  }
+  return L;
+}
+function buildLetters(data, kase) {
+  const out = {};
+  for (const [rawCh, def] of Object.entries((data && data.letters) || {})) {
+    const ch = rawCh.toLowerCase();
+    if (!def || !Array.isArray(def.strokes) || !def.strokes.length) continue;
+    out[ch] = buildLetter(ch, def, kase);
+  }
+  return out;
+}
+const LETTERS = { lower: buildLetters(STROKE_DATA, 'lower'), upper: buildLetters(STROKE_DATA_UPPER, 'upper') };
+const ALL_LETTERS = Object.keys(LETTERS.lower);
+const UPPER_AVAILABLE = ALL_LETTERS.every(ch => !!LETTERS.upper[ch]);
+function activeCase() { const c = state.run ? state.run.cfg.case : (state.cfg ? state.cfg.case : 'lower'); return c === 'upper' && UPPER_AVAILABLE ? 'upper' : 'lower'; }
+function LET(ch, kase) { const k = (kase || activeCase()); return (k === 'upper' && LETTERS.upper[ch]) ? LETTERS.upper[ch] : LETTERS.lower[ch]; }
+function glyphOf(ch, kase) { return (kase || activeCase()) === 'upper' ? ch.toUpperCase() : ch; }
+
+/* =====================================================================
+   3. Cell rendering. Guide letter, start markers, arrows, ink, model
+      animation and the ring all live in one SVG per cell so the
+      letterform shown is the letterform scored (TR-8).
+   ===================================================================== */
+const SVG_NS = 'http://www.w3.org/2000/svg';
+const VIEWBOX = '-10 -12 120 224';
+function el(tag, attrs = {}, parent) { const e = document.createElementNS(SVG_NS, tag); for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v); if (parent) parent.appendChild(e); return e; }
+
+function buildCellSVG(letter, level) {
+  const svg = el('svg', { viewBox: VIEWBOX, preserveAspectRatio: 'xMidYMid meet', 'aria-hidden': 'true' });
+  const guide = el('g', { class: 'guide' }, svg);
+  for (const s of letter.strokes) el('path', { d: s.isDot ? dotPath(s) : s.d }, guide);
+  const arrows = el('g', { class: 'arrows' }, svg);
+  const markers = el('g', { class: 'markers' }, svg);
+  const placed = [];
+  for (const s of letter.strokes) {
+    for (const a of s.arrows) el('path', { d: 'M -7 -6 L 7 0 L -7 6 Z', transform: `translate(${a.p[0].toFixed(1)} ${a.p[1].toFixed(1)}) rotate(${a.angle.toFixed(1)})` }, arrows);
+    /* A stroke that starts where an earlier one started (the bowls of B D P R, the slant of N) gets its
+       number a little way along its own path so both numbers show; scoring keeps the true start. */
+    let at = s.start;
+    if (placed.some(p => dist(p, at) < 14) && !s.isDot) at = pointAtFraction(s.raw, Math.min(0.5, 26 / s.len)).p;
+    placed.push(at);
+    const m = el('g', { class: 'marker', 'data-idx': s.idx }, markers);
+    el('circle', { cx: at[0].toFixed(1), cy: at[1].toFixed(1), r: 10.5 }, m);
+    const t = el('text', { x: at[0].toFixed(1), y: (at[1] + 0.5).toFixed(1) }, m); t.textContent = String(s.idx + 1);
+  }
+  el('g', { class: 'ink' }, svg);
+  el('g', { class: 'anim' }, svg);
+  el('rect', { class: 'ring', x: -6, y: -8, width: 112, height: 216, rx: 22 }, svg);
+  applyScaffold(svg, level);
+  return svg;
+}
+function applyScaffold(svg, level) {
+  svg.querySelector('.arrows').style.display = level >= 2 ? '' : 'none';
+  svg.querySelector('.markers').style.display = level >= 1 ? '' : 'none';
+}
+function pulseMarker(svg, idx) {
+  const m = svg.querySelector(`.marker[data-idx="${idx}"]`); if (!m) return;
+  const wasHidden = svg.querySelector('.markers').style.display === 'none';
+  if (wasHidden) svg.querySelector('.markers').style.display = '';
+  const c = m.querySelector('circle'); c.setAttribute('r', '15'); setTimeout(() => c.setAttribute('r', '10.5'), 500);
+  setTimeout(() => { c.setAttribute('r', '15'); setTimeout(() => c.setAttribute('r', '10.5'), 500); }, 900);
+  if (wasHidden) setTimeout(() => { svg.querySelector('.markers').style.display = 'none'; }, 3000);
+}
+function setInkLive(svg, pts) {
+  let live = svg.querySelector('.ink .live');
+  if (!live) live = el('path', { class: 'live' }, svg.querySelector('.ink'));
+  live.setAttribute('d', pts.length > 1 ? polyToPath(pts) : (pts.length === 1 ? `M ${pts[0][0]} ${pts[0][1]} L ${pts[0][0] + 0.1} ${pts[0][1]}` : ''));
+}
+function commitInk(svg, open) { const live = svg.querySelector('.ink .live'); if (live) { live.classList.remove('live'); live.classList.add('done'); if (open) live.setAttribute('data-open', '1'); } }
+function sealOpenInk(svg) { $$('.ink path[data-open]', svg).forEach(p => p.removeAttribute('data-open')); }
+function dropOpenInk(svg) { $$('.ink path[data-open]', svg).forEach(p => { p.style.opacity = '0'; setTimeout(() => p.remove(), 450); }); }
+function dropLiveInk(svg) { const live = svg.querySelector('.ink .live'); if (live) live.remove(); }
+function clearInk(svg) { svg.querySelector('.ink').innerHTML = ''; }
+function inkPaths(svg) { return $$('.ink path', svg).map(p => p.getAttribute('d')); }
+function clearAnim(svg) { const g = svg.querySelector('.anim'); if (g) g.innerHTML = ''; }
+
+function animateFormation(svg, letter, opts = {}) {
+  const perStroke = opts.perStroke || 1000, gap = opts.gap || 350, signal = opts.signal || {};
+  return new Promise(resolve => {
+    const g = svg.querySelector('.anim'); g.innerHTML = '';
+    const dot = el('circle', { r: 9, cx: 0, cy: 0 });
+    let si = 0, t0 = null, trail = null;
+    const strokes = letter.strokes;
+    function stepStroke() {
+      if (signal.cancelled || si >= strokes.length) return finish();
+      trail = el('path', { d: '' }, g); g.appendChild(dot); t0 = null; requestAnimationFrame(frame);
+    }
+    function frame(ts) {
+      if (signal.cancelled) return finish();
+      if (t0 === null) t0 = ts;
+      const s = strokes[si]; const dur = s.isDot ? 250 : perStroke;
+      const f = clamp((ts - t0) / dur, 0, 1);
+      const k = Math.max(1, Math.round(f * (s.pts.length - 1)));
+      trail.setAttribute('d', s.isDot ? dotPath(s) : polyToPath(s.pts.slice(0, k + 1)));
+      const p = s.pts[Math.min(k, s.pts.length - 1)]; dot.setAttribute('cx', p[0]); dot.setAttribute('cy', p[1]);
+      if (f < 1) requestAnimationFrame(frame); else { si++; setTimeout(stepStroke, gap); }
+    }
+    function finish() {                                   // opts.keep leaves the finished letter on screen for the caller to clear (used while the name plays)
+      if (opts.keep && !signal.cancelled) { try { dot.remove(); } catch (e) {} return resolve(); }
+      setTimeout(() => { g.innerHTML = ''; resolve(); }, signal.cancelled ? 0 : 450);
+    }
+    stepStroke();
+  });
+}
+
+/* =====================================================================
+   4. Narration (NA-1..NA-13). Every line is one complete utterance with a
+      stable key. Assets are used when asset_base is set; otherwise the
+      device's speech synthesis is a flagged fallback (manifest build_flags).
+      Formation and stroke-count lines are keyed per case glyph.
+   ===================================================================== */
+const NARRATION = { version: NARR_T.version, voice_spec: NARR_T.voice_spec, content_rule: NARR_T.content_rule, asset_base: NARR_T.asset_base, utterances: {} };
+function buildNarration() {
+  const U = {};
+  const entry = (key, text, contexts) => { U[key] = { text, tts: text, asset: NARR_T.asset_pattern.replace('{key}', key), contexts }; };
+  for (const u of NARR_T.utterances) {
+    if (!u.per_case_letter) { entry(u.key, u.text, u.contexts); continue; }
+    for (const [k, table] of Object.entries(LETTERS)) for (const ch of Object.keys(table)) {
+      const L = table[ch]; const n = L.strokes.length; const g = k === 'upper' ? ch.toUpperCase() : ch;
+      if (u.multi_stroke_only && n < 2) continue;
+      const text = u.text.split('{formation}').join(L.formation).split('{formation_lc}').join(L.formation.charAt(0).toLowerCase() + L.formation.slice(1)).split('{count}').join(NARR_T.count_words[String(n)] || String(n));
+      entry(`${u.key}.${g}`, text, u.contexts);
+    }
+  }
+  NARRATION.utterances = U;
+  return NARRATION;
+}
+buildNarration();
+function formationKey(ch, kase) { return 'formation.' + glyphOf(ch, kase || activeCase()); }
+function strokesKey(ch, kase) { return 'strokes.' + glyphOf(ch, kase || activeCase()); }
+
+const Narrator = {
+  delivery: 'text-only', voice: null, voices: [], rate: 0.88, assets: new Map(),
+  seq: 0, speaking: false, currentResolve: null, currentAudio: null, listeners: new Set(), lastEnd: 0, lastResult: null,
+  async init() {
+    if (NARRATION.asset_base) { try { await this.preloadAssets(); this.delivery = 'asset'; } catch (e) { console.warn('narration assets unavailable', e); } }
+    if (this.delivery !== 'asset') this.delivery = ('speechSynthesis' in window) ? 'browser-tts' : 'text-only';
+    if (this.delivery === 'browser-tts') await this.loadVoices();
+  },
+  async preloadAssets() {                       // PL-7: everything before the activity starts
+    const base = NARRATION.asset_base.replace(/\/?$/, '/');
+    const jobs = Object.entries(NARRATION.utterances).map(async ([key, u]) => {
+      const res = await fetch(base + u.asset); if (!res.ok) throw new Error(key);
+      const blob = await res.blob(); const a = new Audio(URL.createObjectURL(blob)); a.preload = 'auto'; this.assets.set(key, a);
+    });
+    await Promise.all(jobs);
+  },
+  async loadVoices() {
+    const get = () => speechSynthesis.getVoices();
+    let v = get();
+    if (!v.length) { await new Promise(res => { const t = setTimeout(res, 1500); speechSynthesis.addEventListener('voiceschanged', () => { clearTimeout(t); res(); }, { once: true }); }); v = get(); }
+    const en = v.filter(x => /^en/i.test(x.lang));
+    this.voices = en.length ? en : v;
+    const wanted = state.cfg && state.cfg.voice;
+    this.voice = (wanted && this.voices.find(x => x.name === wanted)) || this.pickVoice(this.voices);
+  },
+  pickVoice(voices) {
+    const pref = [/natural/i, /neural/i, /premium/i, /enhanced/i, /google us english/i, /samantha/i, /aria/i, /jenny/i, /ava\b/i, /allison/i, /zira/i];
+    for (const re of pref) { const v = voices.find(x => re.test(x.name)); if (v) return v; }
+    return voices.find(x => /en-US/i.test(x.lang)) || voices[0] || null;
+  },
+  cancel() {
+    this.seq++;
+    if (this.delivery === 'browser-tts') { try { speechSynthesis.cancel(); } catch (e) {} }
+    if (this.currentAudio) { try { this.currentAudio.pause(); } catch (e) {} this.currentAudio = null; }
+    const r = this.currentResolve; this.currentResolve = null; this.setSpeaking(false); if (r) r('cancelled');
+  },
+  speak(key) {
+    return new Promise(resolve => {
+      const u = NARRATION.utterances[key];
+      if (!u) { console.warn('missing narration key', key); return resolve('missing'); }
+      this.cancel();
+      const mySeq = ++this.seq; this.currentResolve = resolve;
+      const done = (how) => { if (mySeq !== this.seq) return; this.currentResolve = null; this.lastResult = how; this.setSpeaking(false); resolve(how); };
+      if (this.delivery === 'asset' && this.assets.has(key)) {
+        const a = this.assets.get(key); this.currentAudio = a; a.currentTime = 0;
+        a.onended = () => done('ended'); a.onerror = () => done('error');
+        this.setSpeaking(true); a.play().catch(() => done('error')); return;
+      }
+      if (this.delivery === 'browser-tts') {
+        const utt = new SpeechSynthesisUtterance(u.tts);
+        if (this.voice) { utt.voice = this.voice; utt.lang = this.voice.lang; } else utt.lang = 'en-US';
+        utt.rate = this.rate; utt.pitch = 1;
+        utt.onend = () => done('ended');
+        utt.onerror = (e) => done((e.error === 'interrupted' || e.error === 'canceled') ? 'cancelled' : 'error');
+        this.setSpeaking(true);
+        setTimeout(() => { if (mySeq !== this.seq) return; try { speechSynthesis.resume(); speechSynthesis.speak(utt); } catch (e) { done('error'); } }, 40);   // resume(): WebKit can stay paused after cancel()
+        const est = 800 + u.tts.length * 80 / this.rate;   // watchdog: some engines never fire onend
+        setTimeout(() => { if (mySeq === this.seq && this.currentResolve) done('timeout'); }, est + 3000);
+        return;
+      }
+      this.setSpeaking(true); setTimeout(() => done('text'), 400 + u.tts.length * 45);   // text-only pacing
+    });
+  },
+  setSpeaking(v) { if (this.speaking && !v) this.lastEnd = now(); this.speaking = v; for (const f of this.listeners) f(v); },
+  inWindow(t) { return this.speaking || ((t == null ? now() : t) - this.lastEnd) < 300; }   // §5.2.2: a capture whose onset falls here is discarded
+};
+
+/* =====================================================================
+   5. Sound effects (not narration; mutable per NA-4). No buzzer exists.
+   ===================================================================== */
+const SFX = {
+  ctx: null, enabled: true,
+  init() { if (this.ctx) return; try { this.ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {} },
+  resume() { if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume().catch(() => {}); },
+  tone(freq, dur, o = {}) {
+    if (!this.ctx || !this.enabled) return;
+    const t = this.ctx.currentTime + (o.at || 0); const osc = this.ctx.createOscillator(); const g = this.ctx.createGain();
+    osc.type = o.type || 'sine'; osc.frequency.value = freq;
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(o.gain || 0.07, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    osc.connect(g).connect(this.ctx.destination); osc.start(t); osc.stop(t + dur + 0.05);
+  },
+  tick()      { this.tone(660, 0.09, { gain: 0.04 }); },
+  traceDone() { this.tone(523.25, 0.18, { gain: 0.035 }); this.tone(587.33, 0.28, { at: 0.11, gain: 0.035 }); },   // two soft notes, quieter than the chime
+  chime()     { this.tone(523.25, 0.35); this.tone(659.25, 0.5, { at: 0.12 }); },
+  settle()    { this.tone(523.25, 0.3); this.tone(659.25, 0.3, { at: 0.14 }); this.tone(783.99, 0.55, { at: 0.28 }); }
+};
+
+/* =====================================================================
+   6. Trace scoring (TR-1..TR-6), the engine of see-trace-name-letters,
+      unchanged. Scores the motion: start point, direction, stroke order,
+      lifts, and path tolerance. Coverage of the canonical path is required
+      (>= 80%) but never sufficient. Fill-and-scribble is rejected by
+      path-length ratio and reversal count (TR-2).
+   ===================================================================== */
+const TOL = {                       // fractions of x-height; TR-3 defaults, finger loosened per TR-13
+  pen:   { mean: 0.15, max: 0.30, start: 0.20 },
+  touch: { mean: 0.18, max: 0.40, start: 0.22 },
+  mouse: { mean: 0.18, max: 0.40, start: 0.22 }
+};
+function tolFor(pointerType) { const t = TOL[pointerType] || TOL.touch; return { mean: t.mean * XH, max: t.max * XH, start: t.start * XH, band: t.max * XH, profile: TOL[pointerType] ? pointerType : 'touch' }; }
+
+function tangents(C) {
+  const N = C.length; const t = new Array(N);
+  for (let j = 0; j < N; j++) { const a = C[Math.max(0, j - 1)], b = C[Math.min(N - 1, j + 1)]; const dx = b[0] - a[0], dy = b[1] - a[1]; const L = Math.hypot(dx, dy) || 1; t[j] = [dx / L, dy / L]; }
+  return t;
+}
+/* Forward-window matcher. Each user point is matched to a canonical point within a window ahead of
+   the current progress; a small penalty prefers the nearest index ahead, and a direction term
+   penalises canonical points whose tangent opposes the finger's motion. The direction term is what
+   resolves retraces (m, u): the up-going half of an overlapping line wins whenever the finger is
+   moving up, wherever it turned around. */
+function matchForward(user, C, band, startIdx = 0) {
+  const N = C.length; let p = startIdx, cur = startIdx, anchor = startIdx;
+  let devSum = 0, flips = 0, dir = 0, tailStart = -1; const devs = [];
+  const AHEAD = Math.max(12, Math.round(N * 0.25)), BACK = Math.max(10, Math.round(N * 0.4));
+  const FWD = 0.10 * SAMPLE, BWD = 0.16 * SAMPLE, H = 10;   // H: a reversal counts only past 20 units (TR-2), not finger tremor
+  const T = tangents(C), LAMBDA = 8, MIN_MOVE = 1.5;
+  for (let i = 0; i < user.length; i++) {
+    const u = user[i]; let best = -1, bestScore = Infinity, bestDist = Infinity;
+    let vx = 0, vy = 0, moving = false;
+    if (i >= 1) { const prev = user[Math.max(0, i - 2)]; vx = u[0] - prev[0]; vy = u[1] - prev[1]; const vm = Math.hypot(vx, vy); if (vm >= MIN_MOVE) { vx /= vm; vy /= vm; moving = true; } }
+    const lo = Math.max(0, cur - BACK), hi = Math.min(N - 1, p + AHEAD);
+    for (let j = lo; j <= hi; j++) {
+      const d = dist(u, C[j]); let s = d + (j >= cur ? (j - cur) * FWD : (cur - j) * BWD);
+      if (moving) s += LAMBDA * (1 - (vx * T[j][0] + vy * T[j][1]));
+      if (s < bestScore) { bestScore = s; best = j; bestDist = d; }
+    }
+    devs.push(bestDist); devSum += bestDist;
+    if (bestDist <= band) {
+      const delta = best - anchor;
+      if (Math.abs(delta) >= H) { const nd = Math.sign(delta); if (dir !== 0 && nd !== dir) flips++; dir = nd; anchor = best; }
+      cur = best; if (best > p) p = best;
+      if (tailStart < 0 && p >= N - 3) tailStart = i;
+    }
+  }
+  const sorted = devs.slice().sort((a, b) => a - b);
+  const p95 = sorted.length ? sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * 0.95))] : 0;
+  return { coverage: (p + 1) / N, meanDev: user.length ? devSum / user.length : 0, maxDev: sorted.length ? sorted[sorted.length - 1] : 0, p95, flips, tailStart, progress: p };
+}
+
+/* Returns {kind, ...}. kinds: complete | partial | ignore | wrong-start | wrong-direction |
+   wrong-order | scribble | missing-lift | off-path.  `open` = {progress, uLen} for a stroke
+   the child lifted from part-way and may be continuing; `doneSet` = completed stroke indices. */
+function smoothPath(pts) {       // 3-point mean: finger tremor must not inflate path length into a false "scribble"
+  if (pts.length < 5) return pts;
+  const out = [pts[0]];
+  for (let i = 1; i < pts.length - 1; i++) out.push([(pts[i - 1][0] + pts[i][0] + pts[i + 1][0]) / 3, (pts[i - 1][1] + pts[i][1] + pts[i + 1][1]) / 3]);
+  out.push(pts[pts.length - 1]); return out;
+}
+function analyzeStroke(userRaw, letter, expectedIdx, tol, open, doneSet) {
+  const S = letter.strokes[expectedIdx]; const C = S.pts; const N = C.length;
+  const user = smoothPath(userRaw);
+  const uLen = pathLength(user); const startPt = user[0];
+  if (S.isDot) {
+    const d = dist(startPt, S.start);
+    if (d <= tol.start + 6 && uLen < 45) return { kind: 'complete', metrics: { startDev: d, uLen, canonLen: S.len } };
+    if (uLen < 8) return { kind: 'ignore', metrics: { startDev: d, uLen } };
+    return { kind: 'wrong-start', hint: 'dot', metrics: { startDev: d, uLen, canonLen: S.len } };
+  }
+  if (uLen < 8) return { kind: 'ignore', metrics: { uLen } };
+  const startDev = dist(startPt, S.start);
+  /* A stroke the child lifted from part-way can be continued: from where it stopped, or from a later
+     point on the path when the skipped stretch is a retrace of ink already laid down (the lifted m:
+     hump one down to the baseline, lift, hump two from the top). Lifts are recorded, not penalised. */
+  let startIdx = 0, continuing = false, retraceSkip = false;
+  if (open) {
+    if (dist(startPt, C[open.progress]) <= tol.start) { continuing = true; startIdx = open.progress; }
+    else {
+      let k = -1, kd = Infinity;
+      for (let j = open.progress + 1; j < N; j++) { const d = dist(startPt, C[j]); if (d <= tol.start && d < kd) { kd = d; k = j; } }
+      if (k > 0) {
+        const laid = open.pts || [];
+        let ok = true;
+        for (let j = open.progress + 1; j < k; j += 2) { if (!laid.some(q => dist(C[j], q) <= tol.band)) { ok = false; break; } }
+        if (ok) { continuing = true; startIdx = k; retraceSkip = true; }
+      }
+    }
+  }
+  const fwd = matchForward(user, C, tol.band, startIdx);
+  const totalLen = uLen + (continuing ? open.uLen : 0);
+  const base = { startDev, uLen, totalLen, canonLen: S.len, ratio: totalLen / S.len, coverage: fwd.coverage, meanDev: fwd.meanDev, maxDev: fwd.maxDev, p95: fwd.p95, flips: fwd.flips, continuing, lifts: open ? open.lifts : 0, retraceSkip };
+  const startOK = continuing || startDev <= tol.start;
+  const within = fwd.meanDev <= tol.mean && fwd.p95 <= tol.max;
+  const rev = C.slice().reverse();
+
+  if (startOK && fwd.coverage >= 0.8 && within && fwd.flips <= 2) {
+    const next = letter.strokes[expectedIdx + 1];
+    if (next && !next.isDot && fwd.tailStart >= 0) {
+      const tail = user.slice(fwd.tailStart); const tailLen = pathLength(tail);
+      if (tailLen > Math.max(25, 0.3 * next.len)) {
+        const t = matchForward(tail, next.pts, tol.band, 0);
+        if (t.coverage >= 0.5) return { kind: 'missing-lift', metrics: { ...base, tailLen, nextCoverage: t.coverage } };
+      }
+    }
+    if (totalLen > 2.0 * S.len) return { kind: 'scribble', metrics: base };
+    return { kind: 'complete', metrics: base, progress: fwd.progress };
+  }
+  if ((totalLen > 2.0 * S.len && fwd.meanDev <= tol.max) || fwd.flips > 2) return { kind: 'scribble', metrics: base };
+
+  const r0 = matchForward(user, rev, tol.band, 0);       // traced backward? (closed circles share start/end)
+  if (fwd.coverage < 0.5 && r0.coverage >= 0.6) return { kind: 'wrong-direction', metrics: { ...base, revCoverage: r0.coverage } };
+
+  if (!startOK) {
+    for (let k = 0; k < letter.strokes.length; k++) {   // started on another stroke → wrong order
+      if (k === expectedIdx || doneSet.has(k)) continue;
+      const O = letter.strokes[k];
+      if (dist(startPt, O.start) > tol.start) continue;
+      if (O.isDot) { if (uLen < 45) return { kind: 'wrong-order', other: k, metrics: base }; continue; }
+      const m = matchForward(user, O.pts, tol.band, 0);
+      if (m.coverage >= 0.6) return { kind: 'wrong-order', other: k, metrics: { ...base, otherCoverage: m.coverage } };
+    }
+    return { kind: 'wrong-start', hint: S.hint, metrics: base };
+  }
+  if (fwd.coverage >= 0.3 && within) return { kind: 'partial', metrics: base, progress: fwd.progress };
+  if (fwd.p95 > tol.max || fwd.meanDev > tol.mean) return { kind: 'off-path', metrics: base };
+  if (uLen < 20) return { kind: 'ignore', metrics: base };
+  return { kind: 'partial', metrics: base, progress: fwd.progress };
+}
+
+/* Accepted variants (convention HW-5, HW-6, HW-7, HW-11). Every variant is scored correct and stamped.
+   - lift-at-retrace / lift-at-vertex: handled by analyzeStroke's continuation (a stroke lifted part-way
+     may be continued from where it stopped, or past a stretch that retraces ink already laid down).
+   - c-then-up: tried first on the opening stroke of a d g q, against the one-stroke path built above.
+   - crossbar-right-to-left: for a learner set to left-handed, a horizontal bar drawn the other way. */
+function isBar(S) { return !S.isDot && S.raw.length === 2 && Math.abs(S.raw[0][1] - S.raw[1][1]) < 1; }
+function reversedStroke(S) { const raw = S.raw.slice().reverse(); return { ...S, raw, pts: S.pts.slice().reverse(), start: raw[0], end: raw[raw.length - 1] }; }
+function scoreStroke(item, userPts, tol) {
+  const letter = LET(item.unit); const exp = item.strokesDone;
+  if (exp === 0 && !item.open && letter.alt['c-then-up']) {
+    const v = analyzeStroke(userPts, letter.alt['c-then-up'], 0, tol, null, new Set());
+    if (v.kind === 'complete') return { ...v, variant: 'c-then-up', completesLetter: true };
+  }
+  const res = analyzeStroke(userPts, letter, exp, tol, item.open, item.doneSet);
+  const S = letter.strokes[exp];
+  if (state.run && state.run.cfg.hand === 'left' && letter.variants.includes('crossbar-right-to-left') && isBar(S) && !item.open && ['wrong-direction', 'wrong-start', 'wrong-order'].includes(res.kind)) {
+    const v = analyzeStroke(userPts, { strokes: [reversedStroke(S)] }, 0, tol, null, new Set());
+    if (v.kind === 'complete') return { ...v, variant: 'crossbar-right-to-left' };
+  }
+  if (res.kind === 'complete' && res.metrics && res.metrics.lifts > 0) res.variant = res.metrics.retraceSkip ? 'lift-at-retrace' : (letter.variants.includes('lift-at-vertex') ? 'lift-at-vertex' : 'lift-continued');
+  return res;
+}
+
+/* =====================================================================
+   7. Activity engine (AC, FI, F, M, R rules). One phase per run, 3-7 units
+      of one case, item-level results emitted upward; nothing about mastery
+      decided here. Corpus flow: success → next; failure → demonstration and
+      another attempt; reattempt failure → next, and the letter returns
+      later (F-12).
+   ===================================================================== */
+const LATENCY_ACCEPT_MS = 2000 * 1.5;      // PEDAGOGY M-6 letter row × Vision AC-11
+const TIMEOUT_MS = LATENCY_ACCEPT_MS * 2;   // PEDAGOGY R-9
+const IDLE_NUDGE_MS = 6000, IDLE_END_MS = 12000;
+const MAX_ATTEMPTS = 2;                     // ORT-04: one demonstration and another attempt, then the next stimulus
+const CEILING_MS = MANIFEST_BASE.max_duration_sec * 1000;   // AC-3 hard ceiling
+const DEFAULTS = { phase: 'guided', units: ['c', 'o', 'a', 'd', 'g'], case: 'lower', hand: 'right', sfx: 1, seed: null, scaffold: null, voice: null, parent_origin: null };
+
+const state = { cfg: null, run: null, item: null, cell: null, live: false, pointer: null, stroke: null, timers: {}, animSignal: null, flowToken: null, lastInput: 0, inkRaf: 0, replaying: false, lastResult: null, pendingResume: null, cellFraction: null };
+
+function normCase(c) { return c === 'upper' && UPPER_AVAILABLE ? 'upper' : 'lower'; }
+function groupOf(kase) { return normCase(kase) === 'upper' ? 'g2' : 'g1'; }
+function readConfig() {
+  const c = { ...DEFAULTS }; const saved = safeStore('local', 'stl-config');
+  if (saved) for (const k of ['phase', 'units', 'case', 'hand', 'sfx', 'voice']) if (saved[k] != null) c[k] = saved[k];
+  const p = new URLSearchParams(location.search);
+  if (/^(model|guided|independent)$/.test(p.get('phase') || '')) c.phase = p.get('phase');
+  if (p.has('units')) { const u = [...new Set(p.get('units').toLowerCase().split(/[,\s]+/).filter(x => LETTERS.lower[x]))]; if (u.length >= 3 && u.length <= 7) c.units = u; }   // either case accepted; ids are lower-case
+  if (p.has('case')) c.case = p.get('case') === 'upper' ? 'upper' : 'lower';
+  if (p.has('hand')) c.hand = p.get('hand') === 'left' ? 'left' : 'right';
+  if (p.has('sfx')) c.sfx = p.get('sfx') === '0' ? 0 : 1;
+  if (p.has('seed')) c.seed = parseInt(p.get('seed'), 10) || null;
+  if (p.has('scaffold')) c.scaffold = clamp(parseInt(p.get('scaffold'), 10) || 0, 0, 2);
+  if (p.has('parent_origin')) { try { c.parent_origin = new URL(p.get('parent_origin')).origin; } catch (e) { c.parent_origin = null; } }
+  c.case = normCase(c.case);
+  if (!Array.isArray(c.units) || c.units.length < 3 || c.units.length > 7 || c.units.some(x => !LETTERS.lower[x])) c.units = DEFAULTS.units.slice();
+  c.units = c.units.map(x => String(x).toLowerCase());
+  return c;
+}
+function manifestId(group, phase) { return MANIFEST_BASE.id_pattern.replace('{group}', group).replace('{phase}', phase); }
+function estDuration(cfg) { return Math.round(cfg.units.length * (cfg.phase === 'model' ? 18 : 12) + 10); }
+function buildManifest(cfg) {
+  const kase = normCase(cfg.case); const group = groupOf(kase); const n = cfg.units.length; const est = estDuration(cfg);
+  const m = { ...MANIFEST_BASE, id: manifestId(group, cfg.phase), phase: cfg.phase, unit_case: kase, unit_group: MANIFEST_BASE.unit_groups_supported[group],
+    unit_pool: ALL_LETTERS.map(ch => glyphOf(ch, kase)), units: cfg.units.map(ch => glyphOf(ch, kase)), unit_count: n,
+    assets: [kase === 'upper' ? 'strokes-uppercase.json' : 'strokes-lowercase.json'], est_duration_sec: est, build_flags: MANIFEST_BASE.build_flags.slice() };
+  if (est > 120) m.build_flags.push({ rule: 'AC-3', status: 'exceeded', note: `Estimated ${est} s for ${n} letters is over the 120 s target; assigned units are never dropped (RP-7) and the 180 s learner-time ceiling still applies.` });
+  return m;
+}
+function startScaffold(cfg) { if (cfg.phase === 'independent') return cfg.scaffold != null ? cfg.scaffold : 1; return 2; }   // TR-10
+
+function newRun(cfg) {
+  rng = cfg.seed != null ? mulberry32(cfg.seed) : Math.random;
+  cfg = { ...cfg, case: normCase(cfg.case) };
+  const mode = cfg.phase === 'model' ? 'model' : 'normal';
+  return {
+    id: manifestId(groupOf(cfg.case), cfg.phase), run_id: 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), cfg,
+    queue: shuffle(cfg.units).map(u => ({ unit: u, mode, requeued: false, reason: null, inserted: false })),
+    records: [], trial: 0, known: [], doneUnits: [], consec: 0, streak: 0, scaffold: startScaffold(cfg),
+    startedAt: Date.now(), learnerMs: 0, requeueCount: {}, completed: false, completion: null, inks: {}, resumed: 0
+  };
+}
+
+/* ---- timers & flows. Every callback checks the item and its state before acting. ---- */
+function clearTimeouts() { clearTimeout(state.timers.t1); clearTimeout(state.timers.t2); }
+function clearIdle() { clearTimeout(state.timers.i1); clearTimeout(state.timers.i2); }
+function clearAllTimers() { clearTimeouts(); clearIdle(); }
+function beginFlow() { const t = {}; state.flowToken = t; return t; }
+function flowAlive(token, item) { return state.flowToken === token && state.item === item; }
+function tracing(item) { return state.item === item && item.state === 'trace'; }
+
+function armTimeouts(item) {                // R-9: neutral re-prompt, then no-response. Never an error.
+  clearTimeouts();
+  state.timers.t1 = setTimeout(async () => {
+    if (!tracing(item) || item.responseOnset) return;
+    item.reprompts++; const tok = beginFlow();
+    await Narrator.speak('prompt.trace');
+    if (!flowAlive(tok, item) || !tracing(item) || item.responseOnset) return;
+    state.timers.t2 = setTimeout(() => { if (tracing(item) && !item.responseOnset) concludeNoResponse(item); }, TIMEOUT_MS);
+  }, TIMEOUT_MS + 800);
+}
+function armIdle(item) {                    // stopped part-way through the letter
+  clearIdle();
+  state.timers.i1 = setTimeout(async () => { if (!tracing(item) || !state.live) return; item.nudges++; setFeedback('Keep going.'); await Narrator.speak('keepgoing'); }, IDLE_NUDGE_MS);
+  state.timers.i2 = setTimeout(() => { if (tracing(item) && state.live) concludeNoResponse(item, true); }, IDLE_END_MS);
+}
+
+/* ---- rendering the item: one cell, centred, as tall as the work area allows ---- */
+function fitCell() {
+  const host = $('#cells'); const r = host.getBoundingClientRect(); if (!r.width || !r.height) return;
+  const ar = 120 / 224; let h = r.height, w = h * ar; if (w > r.width) { w = r.width; h = w / ar; }
+  host.style.setProperty('--cw', w + 'px'); host.style.setProperty('--ch', h + 'px');
+  state.cellFraction = Math.round((h * (100 / 224)) / Math.min(window.innerWidth, window.innerHeight) * 1000) / 1000;   // TR-16: x-height as a fraction of the short viewport side
+}
+function renderItem(item) {
+  const host = $('#cells'); host.innerHTML = '';
+  const div = document.createElement('div'); div.className = 'cell'; div.dataset.letter = item.unit;
+  const svg = buildCellSVG(LET(item.unit), item.scaffold_level); div.appendChild(svg);
+  const badge = document.createElement('div'); badge.className = 'badge'; badge.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>'; div.appendChild(badge);
+  const cell = { el: div, svg, letter: item.unit, isTarget: true };
+  div.addEventListener('pointerdown', e => onPointerDown(e, cell));
+  div.addEventListener('pointermove', onPointerMove);
+  div.addEventListener('pointerup', onPointerUp);
+  div.addEventListener('pointercancel', onPointerCancel);
+  div.addEventListener('lostpointercapture', onPointerCancel);
+  host.appendChild(div); state.cell = cell; fitCell();
+  return cell;
+}
+function targetCell() { return state.cell; }
+function showRing(cell, on, pulse) { if (!cell) return; cell.el.classList.toggle('is-target-shown', on); if (on && pulse) { cell.el.classList.add('is-pulsing'); setTimeout(() => cell.el.classList.remove('is-pulsing'), 2400); } }
+function fadeInk(cell) { cell.el.classList.add('is-fading'); setTimeout(() => { clearInk(cell.svg); cell.el.classList.remove('is-fading'); }, 450); }
+function fadeLive(cell) { const live = cell.svg.querySelector('.ink .live'); if (!live) return; live.style.opacity = '0'; setTimeout(() => live.remove(), 450); }
+function resetLetter(cell, item) { fadeInk(cell); item.strokesDone = 0; item.open = null; item.doneSet = new Set(); }
+function setPrompt(text) { $('#prompt').textContent = text || ''; }
+function setFeedback(text) { $('#feedback').textContent = text || ''; }
+function updateProgress() {
+  const run = state.run; const host = $('#progress'); host.innerHTML = '';
+  run.cfg.units.forEach(u => { const i = document.createElement('i'); if (run.doneUnits.includes(u)) i.classList.add('is-filled'); else if (state.item && state.item.unit === u) i.classList.add('is-current'); host.appendChild(i); });
+}
+function toLetter(svg, e) { const m = svg.getScreenCTM(); if (!m) return [0, 0]; const pt = svg.createSVGPoint(); pt.x = e.clientX; pt.y = e.clientY; const p = pt.matrixTransform(m.inverse()); return [p.x, p.y]; }
+function scheduleInk() { if (state.inkRaf) return; state.inkRaf = requestAnimationFrame(() => { state.inkRaf = 0; const s = state.stroke; if (s) setInkLive(s.cell.svg, s.pts); }); }
+
+/* ---- pointer input (TR-13..TR-15). Pointer Events cover finger, stylus and mouse on tablets,
+   phones and desktops. One contact traces at a time: extra contacts while a stroke is in progress
+   are ignored and counted (a second finger, a knuckle); a contact that has rested without moving
+   hands over to a new contact (a palm that landed first); very large contacts are treated as palm.
+   A stroke the system cancels (notification, palm gesture) is dropped, never scored. The cell is
+   inert outside the trace state and never cancels narration there (§5.1). ---- */
+const PALM_PX = 80;      // contact ellipse in CSS px; children's fingertips report up to ~60 px on some Android devices
+function onPointerDown(e, cell) {
+  const item = state.item; if (!item || item.state !== 'trace') return;
+  state.lastInput = now();
+  if (e.pointerType === 'touch' && e.width > PALM_PX && e.height > PALM_PX) { item.capture.palm_rejected++; return; }
+  if (!state.live) return;
+  if (state.stroke) {
+    const s = state.stroke; const resting = pathLength(s.pts) < 10 && (now() - s.t0) > 600;
+    if (!resting) { item.capture.multi_touch++; return; }
+    dropLiveInk(s.cell.svg); state.stroke = null; state.pointer = null; item.capture.palm_rejected++;
+  }
+  if (e.cancelable) e.preventDefault();
+  Narrator.cancel();                                   // NA-5 barge-in
+  if (state.animSignal) state.animSignal.cancelled = true;
+  state.flowToken = null; clearTimeouts(); clearIdle();
+  if (!item.promptEnd) item.promptEnd = now();
+  if (!item.responseOnset) { item.responseOnset = now(); item.latency_ms = Math.round(item.responseOnset - item.promptEnd); }
+  item.capture.pointer_types.add(e.pointerType);
+  state.pointer = e.pointerId; try { cell.el.setPointerCapture(e.pointerId); } catch (err) {}
+  state.stroke = { cell, pts: [toLetter(cell.svg, e)], t0: now(), pointerType: e.pointerType };
+  setInkLive(cell.svg, state.stroke.pts);
+}
+function onPointerMove(e) {
+  const s = state.stroke; if (!s || e.pointerId !== state.pointer) return;
+  state.lastInput = now();
+  let evs = e.getCoalescedEvents ? e.getCoalescedEvents() : null; if (!evs || !evs.length) evs = [e];   // empty on some browsers and for synthetic events
+  for (const ev of evs) { const p = toLetter(s.cell.svg, ev); const last = s.pts[s.pts.length - 1]; if (dist(p, last) >= 0.8) s.pts.push(p); }
+  scheduleInk();
+}
+function endStroke(s, e, withPoint) {
+  state.pointer = null; state.stroke = null;
+  if (withPoint) { const p = toLetter(s.cell.svg, e); if (dist(p, s.pts[s.pts.length - 1]) < 60) s.pts.push(p); }   // guard against a bogus final coordinate
+  setInkLive(s.cell.svg, s.pts); s.t1 = now();
+  handleStroke(s);
+}
+function onPointerUp(e) { const s = state.stroke; if (!s || e.pointerId !== state.pointer) return; endStroke(s, e, true); }
+function onPointerCancel(e) {
+  const s = state.stroke; if (!s || e.pointerId !== state.pointer) return;
+  if (e.type === 'lostpointercapture') { if (s.pts.length > 1) endStroke(s, e, false); else { state.pointer = null; state.stroke = null; dropLiveInk(s.cell.svg); } return; }
+  state.pointer = null; state.stroke = null; dropLiveInk(s.cell.svg);
+}
+
+function roundMetrics(m) { const o = {}; for (const [k, v] of Object.entries(m || {})) o[k] = typeof v === 'number' ? Math.round(v * 100) / 100 : v; return o; }
+function handleStroke(s) {
+  const item = state.item; if (!item || item.state !== 'trace') return;
+  const cell = s.cell;
+  const tol = tolFor(s.pointerType); item.tol_profile = tol.profile;
+  const letter = LET(item.unit); const expected = item.strokesDone;
+  const res = scoreStroke(item, s.pts, tol);
+  const rec = { stroke: expected, kind: res.kind, ms: Math.round(s.t1 - s.t0), metrics: roundMetrics(res.metrics) };
+  if (res.variant) { rec.variant = res.variant; item.variants.push({ stroke: expected, kind: res.variant }); }
+  item.formation.push(rec);
+  switch (res.kind) {
+    case 'ignore': dropLiveInk(cell.svg); armIdle(item); return;
+    case 'partial':
+      commitInk(cell.svg, true);
+      item.open = { progress: res.progress, uLen: (item.open ? item.open.uLen : 0) + res.metrics.uLen, pts: (item.open ? item.open.pts : []).concat(s.pts), lifts: (item.open ? item.open.lifts : 0) + 1 };
+      armIdle(item); return;
+    case 'complete':
+      commitInk(cell.svg, false); sealOpenInk(cell.svg); item.open = null;
+      if (res.completesLetter) { letter.strokes.forEach((_, k) => item.doneSet.add(k)); item.strokesDone = letter.strokes.length; }
+      else { item.doneSet.add(expected); item.strokesDone++; }
+      if (item.strokesDone >= letter.strokes.length) return onTraceDone(item, cell);
+      SFX.tick(); armIdle(item); return;
+    default: return onFormationError(item, cell, res);
+  }
+}
+
+/* Letter complete: soft chime, ink settles sage with a check, next item. No praise (TN-2). */
+async function onTraceDone(item, cell) {
+  state.live = false; clearAllTimers(); state.flowToken = null;
+  if (!item.first) item.first = { outcome: 'correct' };
+  item.final = { outcome: 'correct' };
+  state.run.inks[item.unit] = inkPaths(cell.svg);
+  item.state = 'done'; cell.el.classList.add('is-done'); SFX.chime();
+  await sleep(900);
+  if (state.item !== item) return;
+  finishItem(item);
+}
+
+/* Formation error: name the specific failure and model the fix (TR-6, TR-11), then another attempt.
+   A failed reattempt moves on; the letter comes back later (F-12). */
+async function onFormationError(item, cell, res) {
+  const tok = beginFlow(); state.live = false; clearAllTimers();
+  const letter = LET(item.unit);
+  const scribble = res.kind === 'scribble';
+  item.errors.push({ kind: res.kind, stroke: item.strokesDone, other: res.other != null ? res.other : undefined });
+  item.hint_count++; if (scribble) item.scribbles++; else item.attempts++;
+  if (!item.first && !scribble) item.first = { outcome: 'incorrect', kind: res.kind };
+  if (!scribble && item.attempts >= MAX_ATTEMPTS) return endAfterReattempt(item, cell, res);
+  if (scribble && item.scribbles >= 3) return endAfterScribbles(item, cell);   // TR-2: never a knowledge error, but the item cannot loop forever
+  item.hintsGiven.push(res.kind);
+  switch (res.kind) {
+    case 'wrong-start': {
+      const key = letter.strokes[item.strokesDone].hint === 'top' ? 'start.top' : 'start.dot';
+      setFeedback(NARRATION.utterances[key].text); fadeLive(cell); dropOpenInk(cell.svg); item.open = null; pulseMarker(cell.svg, item.strokesDone);
+      await Narrator.speak(key); break;
+    }
+    case 'off-path': setFeedback('Stay on the letter.'); fadeLive(cell); dropOpenInk(cell.svg); item.open = null; await Narrator.speak('stay'); break;
+    case 'wrong-direction':
+      setFeedback('Watch. ' + letter.formation); resetLetter(cell, item);
+      await Narrator.speak('watch'); if (!flowAlive(tok, item)) return; await modelOnCell(cell, item, tok); break;
+    case 'wrong-order': case 'missing-lift': {
+      const key = letter.strokes.length > 1 ? strokesKey(item.unit) : formationKey(item.unit);
+      setFeedback(NARRATION.utterances[key].text); resetLetter(cell, item);
+      await modelOnCell(cell, item, tok, false, key); break;
+    }
+    case 'scribble':
+      setFeedback("Let's draw it. " + letter.formation); resetLetter(cell, item);
+      await Narrator.speak('draw'); if (!flowAlive(tok, item)) return; await modelOnCell(cell, item, tok); break;
+  }
+  if (!flowAlive(tok, item) || !tracing(item)) return;
+  state.live = true; armTimeouts(item);
+}
+async function endAfterReattempt(item, cell, res) {
+  item.final = { outcome: 'incorrect', kind: res.kind }; item.state = 'done'; state.flowToken = null;
+  resetLetter(cell, item);
+  setFeedback("We'll do that one again later."); await Narrator.speak('later');
+  if (state.item !== item) return;
+  finishItem(item);
+}
+async function endAfterScribbles(item, cell) {
+  if (!item.first) item.first = { outcome: 'unscored', kind: 'scribble' };
+  item.final = { outcome: item.first.outcome === 'incorrect' ? 'incorrect' : 'unscored', kind: 'scribble' }; item.state = 'done'; state.flowToken = null;
+  resetLetter(cell, item);
+  setFeedback("We'll do that one again later."); await Narrator.speak('later');
+  if (state.item !== item) return;
+  finishItem(item);
+}
+async function modelOnCell(cell, item, tok, keep, key) {     // TR-12: ~1 s per stroke, sound paired in time (MM-5)
+  const sig = state.animSignal = { cancelled: false }; if (item.state === 'trace') state.live = true;
+  await Promise.all([animateFormation(cell.svg, LET(item.unit), { signal: sig, keep: !!keep }), Narrator.speak(key || formationKey(item.unit))]);
+  state.animSignal = null;
+  return flowAlive(tok, item);
+}
+/* Model and together moves: ring the letter, animate the formation while its cue plays, hand over.
+   No name is said (Tactile Only). The item is stamped revealed, never first-try evidence. */
+async function runModel(item, why, tok) {
+  tok = tok || beginFlow();
+  const cell = targetCell(); showRing(cell, true, false); item.revealed = true;
+  state.live = true;
+  if (why === 'together') { setPrompt('Trace the letter.'); setFeedback("Let's do it together."); await Narrator.speak('together'); }
+  else { setPrompt('Watch.'); setFeedback(''); await Narrator.speak('watch'); }
+  if (!flowAlive(tok, item)) return;
+  setFeedback(LET(item.unit).formation);
+  const ok = await modelOnCell(cell, item, tok); if (!ok) return;
+  showRing(cell, false, false);
+  setPrompt('Trace the letter.'); setFeedback('Your turn.'); await Narrator.speak('yourturn');
+  if (!flowAlive(tok, item) || !tracing(item)) return;
+  if (!item.responseOnset) item.promptEnd = now();
+  armTimeouts(item);
+}
+
+function concludeNoResponse(item, partial) {           // R-9: not an error
+  if (!tracing(item)) return;
+  if (!item.first) item.first = { outcome: 'no-response', partial: !!partial };
+  item.final = { outcome: 'no-response', partial: !!partial };
+  finishItem(item);
+}
+
+/* ---- item bookkeeping, requeue (F-12), consecutive-error intervention (M-13), fading (P-10, P-11) ---- */
+function requeueDecision(item) {
+  const run = state.run; const t = item.first || { outcome: 'no-response' };
+  if (t.outcome !== 'incorrect' && item.final.outcome !== 'incorrect') return null;   // no-response and unscored scribbles are never requeued as errors (R-9, TR-2)
+  const rc = run.requeueCount[item.unit] || (run.requeueCount[item.unit] = { error: 0 });
+  return rc.error < 1 ? 'requeue-error' : null;
+}
+function finishItem(item) {
+  const run = state.run; if (!run || state.item !== item) return;
+  state.item = null; state.live = false; clearAllTimers(); state.flowToken = null;
+  item.endedAt = now(); item.state = 'done';
+  const t = item.first || { outcome: 'no-response' }; const final = item.final || t;
+  if (final.outcome === 'correct' && !run.doneUnits.includes(item.unit)) run.doneUnits.push(item.unit);
+  const isError = t.outcome === 'incorrect';                 // R-4, R-9, TR-2: no-response and scribbles never count
+  if (t.outcome === 'correct') {
+    if (!run.known.includes(item.unit)) run.known.push(item.unit);
+    if (run.cfg.phase === 'independent') {                    // the scaffold moves on trace evidence only (P-10)
+      const fast = item.latency_ms != null && item.latency_ms <= LATENCY_ACCEPT_MS;
+      const clean = item.hint_count === 0 && (item.replays || 0) === 0 && !item.revealed && fast;
+      run.streak = clean ? run.streak + 1 : 0;
+      if (run.streak >= 3 && run.scaffold > 0) { run.scaffold--; run.streak = 0; }
+    }
+  } else {
+    run.streak = 0;
+    if (isError && run.cfg.phase === 'independent' && run.scaffold < 2) run.scaffold++;   // P-11
+  }
+  if (isError) run.consec++; else if (t.outcome === 'correct') run.consec = 0;
+  const reason = requeueDecision(item);
+  const together = isError && run.consec >= 2;
+  if (reason) {
+    run.requeueCount[item.unit].error++;
+    run.queue.push({ unit: item.unit, mode: run.cfg.phase === 'model' ? 'model' : (together ? 'together' : 'normal'), requeued: true, reason, inserted: false });
+  }
+  if (together) {                                             // M-13: insert a known item, then the missed letter returns as a together move
+    const k = run.known.filter(u => u !== item.unit);
+    if (k.length) run.queue.splice(reason ? run.queue.length - 1 : run.queue.length, 0, { unit: pick(k), mode: 'normal', requeued: false, reason: 'inserted-known', inserted: true });
+    run.consec = 0;
+  }
+  const rec = buildRecord(item, run); run.records.push(rec);
+  persistRun(); emit('activity:item', rec);
+  setTimeout(nextItem, 350);
+}
+function buildRecord(item, run) {
+  const t = item.first || { outcome: 'no-response' }; const final = item.final || t;
+  const cap = item.capture; const conf = Math.max(0.4, 1 - 0.3 * (cap.multi_touch + cap.palm_rejected));
+  const capture = { pointer_types: [...cap.pointer_types], multi_touch: cap.multi_touch, palm_rejected: cap.palm_rejected, tolerance_profile: item.tol_profile || null, confidence: Math.round(conf * 100) / 100 };
+  const kase = run.cfg.case;
+  return {
+    schema: 'v1', activity_id: run.id, activity_version: MANIFEST_BASE.version, corpus_entry_id: MANIFEST_BASE.corpus_entry_id, run_id: run.run_id, trial: item.trial, unit: glyphOf(item.unit, kase), unit_id: item.unit, unit_type: 'letter',
+    unit_case: kase, unit_group: MANIFEST_BASE.unit_groups_supported[groupOf(kase)], phase: run.cfg.phase, hand: run.cfg.hand,
+    presentation: { mode: item.mode, requeued: item.requeued, requeue_reason: item.requeue_reason, inserted_known: item.inserted_known, scaffold_level: item.scaffold_level },
+    response_mode: 'trace', evaluation: 'E-TRACE',
+    outcome: t.outcome, error_kind: t.kind || null, partial: !!t.partial,
+    final_outcome: final.outcome, repaired: t.outcome === 'incorrect' && final.outcome === 'correct',
+    latency_ms: item.latency_ms == null ? null : item.latency_ms, attempts: item.attempts, hint_count: item.hint_count, hints: item.hintsGiven.slice(), reprompts: item.reprompts, nudges: item.nudges, replays: item.replays || 0, scribbles: item.scribbles,
+    target_revealed_before_response: item.revealed, variants: item.variants.slice(), stroke_convention: STROKE_DATA.font_ref + '@' + STROKE_DATA.version,
+    errors: item.errors, formation: item.formation, capture,
+    narration_delivery: Narrator.delivery, time_on_item_ms: Math.round(item.endedAt - item.startedAt), ts: new Date().toISOString()
+  };
+}
+
+/* ---- the item loop ---- */
+async function nextItem() {
+  const run = state.run; if (!run || run.completed) return;
+  if (run.queue.length && run.learnerMs >= CEILING_MS) return finishRun('ceiling');
+  if (!run.queue.length) return finishRun('complete');
+  const q = run.queue.shift(); const target = q.unit;
+  const item = {
+    trial: ++run.trial, unit: target, mode: q.mode, requeued: q.requeued, requeue_reason: q.reason || null, inserted_known: q.inserted, scaffold_level: run.scaffold, state: 'trace',
+    errors: [], formation: [], variants: [], hintsGiven: [], attempts: 0, hint_count: 0, reprompts: 0, nudges: 0, replays: 0, scribbles: 0,
+    first: null, final: null, revealed: false, startedAt: now(), promptEnd: null, responseOnset: null, latency_ms: null,
+    strokesDone: 0, open: null, doneSet: new Set(), capture: { multi_touch: 0, palm_rejected: 0, pointer_types: new Set() }
+  };
+  state.item = item; state.pointer = null; state.stroke = null;
+  renderItem(item); updateProgress(); setFeedback('');
+  const tok = beginFlow(); state.live = true;                       // barge-in from the first instant (NA-5)
+  if (item.mode === 'model' || item.mode === 'together') { item.revealed = true; await sleep(300); if (!flowAlive(tok, item)) return; return runModel(item, item.mode, tok); }
+  setPrompt('Trace the letter.');
+  const r = await Narrator.speak('prompt.trace');
+  if (!flowAlive(tok, item)) return;
+  if (r !== 'cancelled') item.promptEnd = now();
+  armTimeouts(item);                                                 // NA-12 pause folded into the timeout offset
+}
+
+/* ---- run start / finish / persistence / emission ---- */
+function persistRun() {
+  const run = state.run; if (!run) return;
+  safeStore('session', 'stl-run', { savedAt: Date.now(), run: { ...run, inks: run.inks } });
+}
+function loadSavedRun() {
+  const s = safeStore('session', 'stl-run'); if (!s || !s.run || s.run.completed) return null;
+  if (Date.now() - s.savedAt > 30 * 60 * 1000) { safeStore('session', 'stl-run', null); return null; }
+  return s.run;
+}
+function postTarget() {                                     // never '*': the configured parent_origin, else the referrer's origin, else nothing
+  const cfg = state.cfg; if (cfg && cfg.parent_origin) return cfg.parent_origin;
+  try { if (document.referrer) { const o = new URL(document.referrer).origin; if (o && o !== 'null') return o; } } catch (e) {}
+  return null;
+}
+function emit(type, detail) {
+  try { window.dispatchEvent(new CustomEvent(type, { detail })); } catch (e) {}
+  try { const origin = postTarget(); if (origin && window.parent && window.parent !== window) window.parent.postMessage({ type, payload: detail }, origin); } catch (e) {}
+}
+function median(a) { if (!a.length) return null; const s = a.slice().sort((x, y) => x - y); const m = Math.floor(s.length / 2); return s.length % 2 ? s[m] : Math.round((s[m - 1] + s[m]) / 2); }
+function buildResultPayload(run) {
+  const recs = run.records; const kase = run.cfg.case;
+  const summary = run.cfg.units.map(u => {
+    const all = recs.filter(r => r.unit_id === u); const rs = all.filter(r => !r.presentation.requeued && !r.presentation.inserted_known);   // first presentation only
+    return { unit: glyphOf(u, kase), unit_id: u, presentations: all.length, first_presentations: rs.length,
+      revealed_presentations: rs.filter(r => r.target_revealed_before_response).length,   // model phase and together moves: never first-try evidence
+      first_try_correct: rs.filter(r => r.outcome === 'correct' && !r.target_revealed_before_response).length,
+      ended_correct: all.some(r => r.final_outcome === 'correct'),
+      errors: rs.flatMap(r => r.errors.filter(e => e.kind !== 'scribble').map(e => e.kind)),
+      scribbles: all.reduce((a, r) => a + r.scribbles, 0),
+      no_response: rs.filter(r => r.outcome === 'no-response').length,
+      variants: [...new Set(all.flatMap(r => r.variants.map(v => v.kind)))],
+      median_latency_ms: median(rs.map(r => r.latency_ms).filter(x => x != null)) };
+  });
+  return {
+    schema: 'v1', activity_id: run.id, activity_version: MANIFEST_BASE.version, run_id: run.run_id, corpus_entry: MANIFEST_BASE.corpus_entry, corpus_entry_id: MANIFEST_BASE.corpus_entry_id,
+    phase: run.cfg.phase, units: run.cfg.units.map(u => glyphOf(u, kase)), unit_ids: run.cfg.units.slice(), unit_case: kase, unit_group: MANIFEST_BASE.unit_groups_supported[groupOf(kase)], hand: run.cfg.hand,
+    stroke_convention: STROKE_DATA.font_ref + '@' + STROKE_DATA.version,
+    completion: run.completion, all_units_correct: run.cfg.units.every(u => run.doneUnits.includes(u)), started_at: new Date(run.startedAt).toISOString(), ended_at: new Date().toISOString(),
+    learner_time_ms: Math.round(run.learnerMs), resumed_times: run.resumed, narration_delivery: Narrator.delivery, cell_fraction: state.cellFraction, corpus_deviations: MANIFEST_BASE.corpus_deviations,
+    items: recs, summary, repeat_presentations: recs.filter(r => r.presentation.requeued || r.presentation.inserted_known).map(r => ({ trial: r.trial, unit: r.unit, reason: r.presentation.inserted_known ? 'inserted-known' : r.presentation.requeue_reason, outcome: r.outcome, final_outcome: r.final_outcome }))
+  };
+}
+async function finishRun(kind) {
+  const run = state.run; if (!run || run.completed) return;
+  run.completed = true; run.completion = kind; state.item = null; state.live = false; clearAllTimers(); releaseWakeLock();
+  safeStore('session', 'stl-run', null);
+  const payload = buildResultPayload(run); state.lastResult = payload;
+  try { const key = 'activity-results:' + run.id; const arr = safeStore('local', key) || []; arr.push(payload); safeStore('local', key, arr.slice(-20)); } catch (e) {}
+  emit('activity:result', payload);
+  showComplete(run, kind);
+}
+setInterval(() => {                                     // learner time (AC-3): active stretches only; idle waits and replay narration excluded
+  const run = state.run; if (!run || run.completed || !state.item) return;
+  const active = state.stroke || (now() - state.lastInput) < 5000 || (Narrator.speaking && !state.replaying) || state.animSignal;
+  if (active) run.learnerMs += 250;
+}, 250);
+
+/* =====================================================================
+   8. Screens, tutor drawer, boot
+   ===================================================================== */
+function showScreen(id) { $$('.screen').forEach(s => s.classList.toggle('is-active', s.id === id)); if (id === 'screen-activity') setTimeout(fitCell, 0); }
+function applyHand(cfg) { document.body.dataset.hand = cfg.hand; }
+function introKey(cfg) { return cfg.phase === 'model' ? 'intro.model' : 'intro.guided'; }
+function renderPreview(cfg) { $('#preview').innerHTML = cfg.units.map(u => `<span>${glyphOf(u, cfg.case)}</span>`).join(''); }
+function renderStart() { $('#start-title').textContent = NARRATION.utterances[introKey(state.cfg)].text; renderPreview(state.cfg); }
+function buildLink(cfg) {
+  const p = new URLSearchParams({ phase: cfg.phase, units: cfg.units.join(','), case: cfg.case, hand: cfg.hand, sfx: String(cfg.sfx) });
+  return location.origin + location.pathname + '?' + p.toString();
+}
+function saveConfig(cfg) { safeStore('local', 'stl-config', { phase: cfg.phase, units: cfg.units, case: cfg.case, hand: cfg.hand, sfx: cfg.sfx, voice: cfg.voice || null }); }
+
+function unlockSpeech() {          // iOS and Android: the first speak() must happen inside the tap itself
+  try { if ('speechSynthesis' in window) { speechSynthesis.resume(); speechSynthesis.speak(new SpeechSynthesisUtterance('')); } } catch (e) {}
+}
+let wakeLock = null;
+async function requestWakeLock() { try { if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); } catch (e) {} }
+function releaseWakeLock() { try { if (wakeLock) { wakeLock.release(); wakeLock = null; } } catch (e) {} }
+
+async function startPressed() {
+  const btn = $('#start-btn'); if (btn.disabled) return; btn.disabled = true;
+  SFX.init(); SFX.resume(); SFX.enabled = !!state.cfg.sfx;   // everything that needs the tap runs before the first await
+  unlockSpeech(); requestWakeLock();
+  await Narrator.init(); populateVoices();
+  if (state.pendingResume) {
+    const run = state.pendingResume; state.pendingResume = null; run.resumed++;
+    rng = run.cfg.seed != null ? mulberry32(run.cfg.seed + run.trial) : Math.random;
+    state.run = run; await Narrator.speak('resume');
+  } else {
+    state.run = newRun(state.cfg);
+    await Narrator.speak(introKey(state.cfg));
+  }
+  btn.disabled = false;
+  showScreen('screen-activity');
+  nextItem();
+}
+
+function showComplete(run, kind) {
+  showScreen('screen-complete');
+  const n = run.cfg.units.length; const all = run.cfg.units.every(u => run.doneUnits.includes(u));
+  const key = (kind === 'complete' && all) ? `complete.${n}` : 'complete.partial';     // §14.10: the count only when every unit ended correct
+  $('#complete-text').textContent = NARRATION.utterances[key].text;
+  const row = $('#ink-row'); row.innerHTML = ''; row.classList.remove('no-anim');
+  let i = 0;
+  run.cfg.units.forEach(u => {                            // only the child's own traces, in order (GM-3: <= 3 s, skippable)
+    const paths = run.inks[u]; if (!paths) return;
+    const d = document.createElement('div'); d.className = 'mini'; d.style.animationDelay = (i++ * 0.3) + 's';
+    const svg = el('svg', { viewBox: VIEWBOX, 'aria-hidden': 'true' });
+    paths.forEach(p => el('path', { d: p }, svg));
+    d.appendChild(svg); row.appendChild(d);
+  });
+  $('#screen-complete').addEventListener('pointerdown', () => row.classList.add('no-anim'), { once: true });
+  SFX.settle(); Narrator.speak(key);
+  $('#results-out').value = JSON.stringify(state.lastResult, null, 2);
+}
+
+/* ---- tutor drawer ---- */
+const PHASE_HINTS = {
+  model: 'Each letter is formed for the child first, with its movement words, then the child traces it. Results are stamped as revealed.',
+  guided: 'The child traces each letter. Numbered start dots and arrows stay on every letter.',
+  independent: 'Start dots only. After three quick, unhelped correct tracings the dots go too; after a tracing error one level of help returns.'
+};
+const T = { phase: 'guided', units: [], case: 'lower', hand: 'right', sfx: 1 };
+function seg(sel, v) { $$(sel + ' button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === v))); }
+function syncDraft() { Object.assign(T, { phase: state.cfg.phase, units: state.cfg.units.slice(), case: state.cfg.case, hand: state.cfg.hand, sfx: state.cfg.sfx }); renderDraft(); }
+function renderLetterGrid() {
+  const grid = $('#letter-grid'); grid.innerHTML = '';
+  ALL_LETTERS.forEach(ch => { const b = document.createElement('button'); b.type = 'button'; b.dataset.v = ch; b.textContent = glyphOf(ch, T.case); b.setAttribute('aria-pressed', String(T.units.includes(ch))); grid.appendChild(b); });
+}
+function renderDraft() {
+  seg('#phase-seg', T.phase); seg('#case-seg', T.case); seg('#hand-seg', T.hand); seg('#sfx-seg', String(T.sfx));
+  $('#phase-hint').textContent = PHASE_HINTS[T.phase];
+  $('#case-hint').textContent = T.case === 'upper' ? 'Group 2: upper-case A–Z.' : 'Group 1: lower-case a–z.';
+  renderLetterGrid();
+  const n = T.units.length; const ok = n >= 3 && n <= 7;
+  $('#letter-count').textContent = ok ? `${n} letters chosen.` : `${n} chosen. Choose between 3 and 7.`;
+  $('#apply-btn').disabled = !ok;
+  const draftCfg = { ...state.cfg, ...T };
+  const est = estDuration(draftCfg);
+  $('#duration-hint').textContent = `About ${est} seconds for this set.` + (est > 120 ? ` Over 2 minutes with ${n} letters; the letters are kept, and the activity stops itself at 3 minutes of learner time.` : '');
+  $('#share-link').value = buildLink(draftCfg);
+  $('#manifest-out').value = JSON.stringify(buildManifest(draftCfg), null, 2);
+}
+function openTutor(scrollToResults) { syncDraft(); const t = $('#tutor'); t.classList.add('is-open'); if (scrollToResults) setTimeout(() => $('#results-out').scrollIntoView({ block: 'start' }), 260); }
+function closeTutor() { $('#tutor').classList.remove('is-open'); }
+function populateVoices() {
+  const sel = $('#voice-select'); sel.innerHTML = '';
+  if (Narrator.delivery === 'asset') { $('#voice-hint').textContent = 'Recorded narration assets are in use.'; sel.disabled = true; return; }
+  if (Narrator.delivery !== 'browser-tts' || !Narrator.voices.length) { $('#voice-hint').textContent = 'No speech voices are available on this device. On-screen text is shown instead and results are stamped text-only.'; sel.disabled = true; return; }
+  Narrator.voices.forEach((v, i) => { const o = document.createElement('option'); o.value = String(i); o.textContent = `${v.name} (${v.lang})`; if (Narrator.voice === v) o.selected = true; sel.appendChild(o); });
+  sel.disabled = false; $('#voice-hint').textContent = 'Device speech is a stand-in until recorded narration exists. Pick the most natural voice available.';
+}
+function copyText(text, btn) {
+  const done = () => { const old = btn.textContent; btn.textContent = 'Copied'; setTimeout(() => btn.textContent = old, 1400); };
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, () => fallback());
+  else fallback();
+  function fallback() { const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); done(); } catch (e) {} ta.remove(); }
+}
+
+/* Every narration key the code can ask for; checked at boot against the expanded table (NA-10). */
+const KEYS_USED = ['intro.guided', 'intro.model', 'resume', 'prompt.trace', 'watch', 'together', 'yourturn', 'start.top', 'start.dot', 'draw', 'stay', 'keepgoing', 'later', 'complete.3', 'complete.4', 'complete.5', 'complete.6', 'complete.7', 'complete.partial']
+  .concat(['lower', 'upper'].flatMap(k => ALL_LETTERS.flatMap(ch => { const g = glyphOf(ch, k); return ['formation.' + g].concat(LETTERS[k][ch].strokes.length > 1 ? ['strokes.' + g] : []); })));
+function checkNarrationKeys() { const missing = KEYS_USED.filter(k => !NARRATION.utterances[k]); if (missing.length) console.error('missing narration keys', missing); return missing; }
+function checkNoNames() {           // content rule: no utterance may say a letter name (Tactile Only)
+  const names = ['ay', 'bee', 'see', 'dee', 'ee', 'eff', 'jee', 'aitch', 'eye', 'jay', 'kay', 'ell', 'em', 'en', 'oh', 'pee', 'cue', 'are', 'ess', 'tee', 'you', 'vee', 'double you', 'ex', 'why', 'zee', 'zed'];
+  const bad = Object.entries(NARRATION.utterances).filter(([, u]) => { const t = ' ' + u.tts.toLowerCase().replace(/[^a-z' ]/g, ' ') + ' '; return names.some(n => t.includes(' ' + n + ' ')) || /\s[a-z]\s/.test(t.replace(/\s(a)\s/g, ' ')); }).map(([k]) => k);
+  if (bad.length) console.error('narration names a letter', bad);
+  return bad;
+}
+
+/* ---- boot ---- */
+(function boot() {
+  state.cfg = readConfig(); applyHand(state.cfg); renderStart();
+  checkNarrationKeys(); checkNoNames();
+  const saved = loadSavedRun();
+  if (saved && saved.cfg && saved.cfg.phase === state.cfg.phase && saved.cfg.case === state.cfg.case && saved.cfg.hand === state.cfg.hand && saved.cfg.units.join() === state.cfg.units.join()) { state.pendingResume = saved; $('#start-label').textContent = 'Keep going'; }
+
+  $('#start-btn').addEventListener('click', startPressed);
+  $('#gear').addEventListener('click', () => openTutor(false));
+  $('#tutor-close').addEventListener('click', closeTutor);
+  $('#results-btn').addEventListener('click', () => openTutor(true));
+  $('#again-btn').addEventListener('click', () => {
+    SFX.resume(); unlockSpeech(); requestWakeLock();
+    state.run = newRun(state.cfg); showScreen('screen-activity'); nextItem();
+  });
+  $('#done-btn').addEventListener('click', () => { releaseWakeLock(); state.run = null; $('#start-label').textContent = 'Start'; renderStart(); showScreen('screen-start'); });
+  // Touch defaults that fight tracing: page scroll and rubber-banding, pinch zoom, double-tap zoom, long-press callouts, text selection.
+  const host = $('#cells');
+  ['touchstart', 'touchmove', 'touchend'].forEach(t => host.addEventListener(t, e => { if (e.cancelable) e.preventDefault(); }, { passive: false }));
+  document.addEventListener('gesturestart', e => e.preventDefault());
+  $('#screen-activity').addEventListener('contextmenu', e => e.preventDefault());
+  window.addEventListener('resize', fitCell);
+  $('#replay').addEventListener('click', async () => {   // NA-2: unlimited, never a hint, never scored; replays the instruction in force
+    const item = state.item; if (!item || item.state !== 'trace') return;
+    state.replaying = true; item.replays = (item.replays || 0) + 1;
+    const r = await Narrator.speak('prompt.trace'); state.replaying = false;
+    if (r !== 'cancelled' && tracing(item) && !item.responseOnset && state.live) armTimeouts(item);   // re-arms the timeout, never moves promptEnd
+  });
+  Narrator.listeners.add(v => $('#replay').classList.toggle('is-speaking', v));
+  window.addEventListener('keydown', e => { if ((e.key === 'r' || e.key === 'R') && $('#screen-activity').classList.contains('is-active')) $('#replay').click(); });
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) { Narrator.cancel(); clearAllTimers(); }
+    else { if (state.run && !state.run.completed) requestWakeLock(); if (state.item && state.item.state === 'trace' && !state.item.responseOnset && state.live) armTimeouts(state.item); }
+  });
+
+  // drawer controls
+  $('#letter-grid').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; const ch = b.dataset.v; const i = T.units.indexOf(ch); if (i >= 0) T.units.splice(i, 1); else if (T.units.length < 7) T.units.push(ch); renderDraft(); });
+  const bindSeg = (sel, key, parse) => $(sel).addEventListener('click', e => { const b = e.target.closest('button'); if (!b || b.disabled) return; T[key] = parse ? parse(b.dataset.v) : b.dataset.v; renderDraft(); });
+  bindSeg('#phase-seg', 'phase'); bindSeg('#case-seg', 'case'); bindSeg('#hand-seg', 'hand'); bindSeg('#sfx-seg', 'sfx', v => parseInt(v, 10));
+  $('#apply-btn').addEventListener('click', () => {
+    state.cfg = { ...state.cfg, phase: T.phase, units: T.units.slice(), case: normCase(T.case), hand: T.hand, sfx: T.sfx };
+    saveConfig(state.cfg); safeStore('session', 'stl-run', null); state.pendingResume = null; state.run = null;
+    SFX.enabled = !!state.cfg.sfx; applyHand(state.cfg);
+    try { history.replaceState(null, '', buildLink(state.cfg)); } catch (e) {}
+    $('#start-label').textContent = 'Start'; closeTutor(); showScreen('screen-start'); renderStart();
+  });
+  $('#copy-link-btn').addEventListener('click', e => copyText($('#share-link').value, e.currentTarget));
+  $('#copy-results-btn').addEventListener('click', e => copyText($('#results-out').value || '', e.currentTarget));
+  $('#voice-select').addEventListener('change', e => { const v = Narrator.voices[parseInt(e.target.value, 10)]; if (v) { Narrator.voice = v; state.cfg.voice = v.name; saveConfig(state.cfg); Narrator.speak('intro.guided'); } });
+  $('#voice-hint').textContent = 'Voices load when Start is pressed.';
+  $('#narration-out').value = JSON.stringify(NARRATION, null, 2);
+  syncDraft();
+  window.SeeTrace = { NARRATION, LETTERS, STROKE_DATA, STROKE_DATA_UPPER, buildManifest: (cfg) => buildManifest(cfg || state.cfg), state, analyzeStroke, scoreStroke, buildCellSVG, checkNarrationKeys, checkNoNames, KEYS_USED };
+})();
+</script>
+</body>
+</html>
