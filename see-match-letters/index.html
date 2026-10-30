@@ -1,0 +1,1327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Find the Same Letter</title>
+<meta name="description" content="See a letter, then touch the one that is the same among look-alike letters. Orthographic Knowledge · Tactile Only · See, Match · See Letter, Touch Matching Letter (ORT-01). Letter Units Group 1 (lower-case) and Group 2 (upper-case).">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Andika:ital,wght@0,400;0,700&display=swap">
+<style>
+/* ---------- tokens (single deliberate look: warm linen room, per Vision VZ-1/VZ-6; shared with the other built activities) ---------- */
+:root{
+  --ground:#F3EEE4;
+  --paper:#FBF8F2;
+  --ink:#3A3733;
+  --ink-soft:#6B655C;
+  --stone:#D8D0C2;
+  --stone-deep:#C4BAA8;
+  --lake:#2F5D7C;
+  --lake-soft:#5B84A0;
+  --marigold:#D9A441;
+  --marigold-deep:#B9862C;
+  --sage:#6E9B72;
+  --line:#E6DFD2;
+  --shadow:0 2px 0 rgba(58,55,51,.06), 0 10px 24px rgba(58,55,51,.08);
+  --font:"Andika","Comic Neue","Segoe Print","Trebuchet MS",sans-serif;
+  --radius:28px;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;background:var(--ground);color:var(--ink);font-family:var(--font);
+  font-size:18px;letter-spacing:.04em;line-height:1.5;
+  -webkit-text-size-adjust:100%;overscroll-behavior:none;-webkit-tap-highlight-color:transparent;
+}
+button{font:inherit;letter-spacing:inherit;color:inherit;cursor:pointer}
+button:focus-visible,[tabindex]:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--lake);outline-offset:3px}
+h1,h2,h3{text-wrap:balance;margin:0;line-height:1.25}
+#app{position:fixed;inset:0;overflow:hidden;touch-action:manipulation;-webkit-touch-callout:none}
+.screen{position:absolute;inset:0;display:none;flex-direction:column}
+.screen.is-active{display:flex}
+
+/* ---------- start screen ---------- */
+#screen-start{align-items:center;justify-content:center;padding:24px 24px calc(24px + env(safe-area-inset-bottom,0px));gap:28px;text-align:center}
+#screen-start h1{font-size:clamp(1.6rem,4.2vw,2.6rem);font-weight:700;letter-spacing:.05em}
+.preview{display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
+.preview svg{width:clamp(38px,6vw,64px);height:auto;display:block}
+.preview .glyph path{fill:none;stroke:var(--stone-deep);stroke-width:13;stroke-linecap:round;stroke-linejoin:round}
+.big-start{
+  width:132px;height:132px;border-radius:50%;border:0;background:var(--lake);color:#fff;
+  box-shadow:var(--shadow);display:grid;place-items:center;transition:transform .12s ease;
+}
+.big-start:active{transform:scale(.96)}
+.big-start svg{width:54px;height:54px;margin-left:6px}
+.start-label{font-size:1.15rem;color:var(--ink-soft)}
+.gear{
+  position:absolute;top:16px;right:16px;width:64px;height:64px;border-radius:50%;border:0;
+  background:transparent;color:var(--ink-soft);display:grid;place-items:center;opacity:.55
+}
+.gear:hover,.gear:focus-visible{opacity:1;background:var(--paper)}
+.gear svg{width:30px;height:30px}
+body[data-hand="left"] .gear{right:auto;left:16px}
+
+/* ---------- activity screen ---------- */
+#screen-activity{padding:0;user-select:none;-webkit-user-select:none}
+.top{padding:clamp(12px,2.2vh,22px) clamp(18px,3vw,36px) 0;min-height:13vh;display:flex;flex-direction:column;justify-content:flex-end;gap:2px}
+#prompt{font-size:clamp(1.35rem,3.4vw,2.2rem);font-weight:700;letter-spacing:.06em}
+#feedback{font-size:clamp(1rem,2.3vw,1.4rem);color:var(--ink-soft);min-height:1.5em;letter-spacing:.05em}
+.work{flex:1;min-height:0;padding:clamp(8px,1.5vh,16px) clamp(18px,3vw,36px);display:flex;flex-direction:column;align-items:center;justify-content:space-evenly;touch-action:none}
+#target-row,#options{display:flex;justify-content:center;gap:var(--gap,24px)}
+#options{transition:opacity .35s ease}
+#options.is-withheld{opacity:0;pointer-events:none}
+.cell{
+  position:relative;width:var(--cw,140px);height:var(--ch,240px);flex:0 0 auto;
+  background:var(--paper);border-radius:var(--radius);box-shadow:var(--shadow);
+  touch-action:none;user-select:none;-webkit-user-select:none;overflow:visible;
+  transition:opacity .35s ease,transform .35s ease,box-shadow .35s ease;
+}
+.cell.is-option{cursor:pointer}
+.cell.is-option:active{transform:scale(.98)}
+.cell.is-card{background:var(--ground);box-shadow:0 0 0 3px var(--stone) inset}
+.cell.is-card.is-looking{box-shadow:0 0 0 5px var(--lake-soft) inset}
+.cell.is-set-aside{opacity:.45}
+.cell.is-dim{opacity:.32}
+.cell.is-done{box-shadow:0 0 0 4px var(--sage) inset,var(--shadow)}
+.cell svg{position:absolute;inset:0;width:100%;height:100%;display:block;overflow:visible}
+.glyph path{fill:none;stroke:var(--ink);stroke-width:13;stroke-linecap:round;stroke-linejoin:round;transition:stroke .4s ease}
+.cell.is-done .glyph path{stroke:var(--sage)}
+.hl path{fill:none;stroke:var(--marigold);stroke-width:15;stroke-linecap:round;stroke-linejoin:round;opacity:0;transition:opacity .3s ease}
+.hl path.is-on{opacity:1}
+.cell.is-shown{outline:5px solid var(--marigold);outline-offset:5px}
+.cell.is-pulsing{animation:ring-pulse 1.1s ease-in-out 2}
+.cell.is-nudge{animation:nudge .5s ease-in-out 2}
+@keyframes ring-pulse{0%,100%{outline-width:5px}50%{outline-width:10px}}
+@keyframes nudge{0%,100%{transform:none}50%{transform:translateY(-6px)}}
+.badge{position:absolute;top:10px;right:10px;width:44px;height:44px;border-radius:50%;background:var(--sage);color:#fff;display:grid;place-items:center;opacity:0;transform:scale(.6);transition:opacity .3s ease,transform .3s ease;pointer-events:none}
+.badge svg{width:26px;height:26px}
+.cell.is-done .badge{opacity:1;transform:none}
+.ghost{position:fixed;z-index:10;pointer-events:none;transform-origin:0 0;transition:transform .9s cubic-bezier(.45,.05,.3,1),opacity .4s ease}
+.ghost path{fill:none;stroke:var(--lake);stroke-width:13;stroke-linecap:round;stroke-linejoin:round;opacity:.85}
+.bottom{height:calc(104px + env(safe-area-inset-bottom,0px));position:relative;flex:0 0 auto}
+.replay{
+  position:absolute;left:clamp(14px,2.5vw,28px);bottom:calc(18px + env(safe-area-inset-bottom,0px));width:72px;height:72px;border-radius:50%;border:0;touch-action:manipulation;
+  background:var(--paper);box-shadow:var(--shadow);display:grid;place-items:center;color:var(--lake);
+}
+.replay:active{transform:scale(.96)}
+.replay svg{width:34px;height:34px}
+.replay.is-speaking{box-shadow:0 0 0 4px var(--lake-soft) inset,var(--shadow)}
+body[data-hand="left"] .replay{left:auto;right:clamp(14px,2.5vw,28px)}
+.progress{position:absolute;right:clamp(18px,3vw,36px);bottom:calc(40px + env(safe-area-inset-bottom,0px));display:flex;gap:10px;flex-wrap:wrap;max-width:60vw;justify-content:flex-end}
+body[data-hand="left"] .progress{right:auto;left:clamp(18px,3vw,36px);justify-content:flex-start}
+.progress i{width:16px;height:16px;border-radius:50%;border:3px solid var(--stone-deep);display:block}
+.progress i.is-filled{background:var(--sage);border-color:var(--sage)}
+.progress i.is-current{border-color:var(--lake)}
+
+/* ---------- completion screen ---------- */
+#screen-complete{align-items:center;justify-content:center;padding:24px 24px calc(24px + env(safe-area-inset-bottom,0px));gap:26px;text-align:center}
+#complete-text{font-size:clamp(1.5rem,4vw,2.4rem);font-weight:700}
+.ink-row{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;max-width:900px}
+.ink-row .mini{width:clamp(70px,11vw,120px);aspect-ratio:120/200;background:var(--paper);border-radius:18px;box-shadow:var(--shadow);opacity:0;transform:translateY(14px);animation:rise .5s ease forwards}
+.ink-row.no-anim .mini{animation:none;opacity:1;transform:none}
+.ink-row .mini svg{width:100%;height:100%;display:block}
+.ink-row .mini path{fill:none;stroke:var(--sage);stroke-width:13;stroke-linecap:round;stroke-linejoin:round}
+@keyframes rise{to{opacity:1;transform:none}}
+.row{display:flex;gap:16px;flex-wrap:wrap;justify-content:center}
+.btn{
+  min-height:64px;min-width:160px;padding:0 28px;border-radius:32px;border:0;background:var(--paper);
+  box-shadow:var(--shadow);font-size:1.15rem;font-weight:700;color:var(--ink)
+}
+.btn.is-primary{background:var(--lake);color:#fff}
+.btn.is-quiet{background:transparent;box-shadow:none;color:var(--ink-soft);font-weight:400;min-width:0}
+.results-toggle{position:absolute;bottom:16px;right:16px}
+
+/* ---------- tutor drawer ---------- */
+#tutor{
+  position:absolute;top:0;right:0;bottom:0;width:min(480px,100%);background:var(--paper);box-shadow:-8px 0 30px rgba(58,55,51,.12);
+  transform:translateX(105%);transition:transform .25s ease;overflow:auto;padding:22px 22px 40px;z-index:20;
+  font-size:15px;letter-spacing:.02em
+}
+#tutor.is-open{transform:none}
+#tutor h2{font-size:1.2rem;margin:0 0 6px}
+#tutor h3{font-size:.85rem;text-transform:uppercase;letter-spacing:.12em;color:var(--ink-soft);margin:22px 0 8px}
+#tutor p{margin:0 0 10px;max-width:60ch}
+.drawer-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px}
+.close{width:48px;height:48px;border-radius:50%;border:0;background:var(--ground)}
+.field{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
+.seg{display:flex;flex-wrap:wrap;gap:6px}
+.seg button{min-height:44px;padding:0 14px;border-radius:22px;border:2px solid var(--line);background:var(--paper)}
+.seg button[aria-pressed="true"]{border-color:var(--lake);background:var(--lake);color:#fff}
+.seg button:disabled{opacity:.4;cursor:default}
+.letters{display:grid;grid-template-columns:repeat(9,1fr);gap:6px}
+.letters button{min-height:44px;border-radius:12px;border:2px solid var(--line);background:var(--paper);font-size:1.15rem;font-weight:700}
+.letters button[aria-pressed="true"]{border-color:var(--lake);background:var(--lake);color:#fff}
+.hint{color:var(--ink-soft);font-size:.9rem}
+select,input[type="text"]{font:inherit;padding:8px 10px;border-radius:10px;border:2px solid var(--line);background:#fff;color:var(--ink);max-width:100%}
+textarea{width:100%;min-height:150px;font:12px/1.4 ui-monospace,Consolas,monospace;padding:10px;border-radius:10px;border:2px solid var(--line);background:#fff;color:var(--ink);resize:vertical}
+.small-btn{min-height:44px;padding:0 16px;border-radius:22px;border:2px solid var(--line);background:var(--paper);font-weight:700}
+.small-btn.is-primary{background:var(--lake);border-color:var(--lake);color:#fff}
+.small-btn:disabled{opacity:.45;cursor:default}
+.flag{border-left:4px solid var(--marigold);padding:8px 12px;background:var(--ground);border-radius:0 12px 12px 0;margin-bottom:10px}
+.flag b{display:block}
+code{font-family:ui-monospace,Consolas,monospace;font-size:.92em;background:var(--ground);padding:1px 5px;border-radius:5px}
+
+@media (max-width:700px){
+  .top{min-height:11vh}
+  .bottom{height:92px}
+  .replay{width:64px;height:64px}
+  .letters{grid-template-columns:repeat(7,1fr)}
+}
+@media (prefers-reduced-motion:reduce){
+  .cell.is-pulsing,.cell.is-nudge{animation:none}
+  .ink-row .mini{animation:none;opacity:1;transform:none}
+}
+</style>
+</head>
+<body data-hand="right">
+<div id="app">
+
+  <!-- ===== Start ===== -->
+  <section id="screen-start" class="screen is-active" aria-label="Start">
+    <button class="gear" id="gear" aria-label="Settings for grown-ups" title="Settings for grown-ups">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+    </button>
+    <h1 id="start-title">Find the letter that is the same</h1>
+    <div class="preview" id="preview" aria-hidden="true"></div>
+    <button class="big-start" id="start-btn" aria-label="Start">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3.5v17l14-8.5z" fill="currentColor"/></svg>
+    </button>
+    <div class="start-label" id="start-label">Start</div>
+  </section>
+
+  <!-- ===== Activity ===== -->
+  <section id="screen-activity" class="screen" aria-label="Activity">
+    <div class="top">
+      <div id="prompt" aria-live="polite"></div>
+      <div id="feedback" aria-live="polite"></div>
+    </div>
+    <div class="work" id="work">
+      <div id="target-row"></div>
+      <div id="options" role="group" aria-label="Letters to choose from"></div>
+    </div>
+    <div class="bottom">
+      <button class="replay" id="replay" aria-label="Hear it again" title="Hear it again">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9.5v5h3.5L12 18.5v-13L7.5 9.5z" fill="currentColor" stroke="none"/><path d="M15.5 8.5a4.5 4.5 0 0 1 0 7"/><path d="M18.5 5.8a8.5 8.5 0 0 1 0 12.4"/></svg>
+      </button>
+      <div class="progress" id="progress" aria-hidden="true"></div>
+    </div>
+  </section>
+
+  <!-- ===== Complete ===== -->
+  <section id="screen-complete" class="screen" aria-label="Finished">
+    <div id="complete-text"></div>
+    <div class="ink-row" id="ink-row"></div>
+    <div class="row">
+      <button class="btn is-primary" id="again-btn">Again</button>
+      <button class="btn" id="done-btn">Done</button>
+    </div>
+    <button class="btn is-quiet results-toggle" id="results-btn">Results for grown-ups</button>
+  </section>
+
+  <!-- ===== Tutor drawer (not child-facing) ===== -->
+  <aside id="tutor" aria-label="Settings for grown-ups">
+    <div class="drawer-head">
+      <h2>Settings for grown-ups</h2>
+      <button class="close" id="tutor-close" aria-label="Close settings">✕</button>
+    </div>
+    <p class="hint">Changes apply to the next run. Share the link below to assign exactly this set.</p>
+
+    <h3>Phase</h3>
+    <div class="seg" id="phase-seg" role="group" aria-label="Phase">
+      <button data-v="model" aria-pressed="false">Model</button>
+      <button data-v="guided" aria-pressed="true">Guided</button>
+      <button data-v="independent" aria-pressed="false">Independent</button>
+    </div>
+    <p class="hint" id="phase-hint"></p>
+
+    <h3>Letter case</h3>
+    <div class="seg" id="case-seg" role="group" aria-label="Letter case">
+      <button data-v="lower" aria-pressed="true">Lower-case (Group 1)</button>
+      <button data-v="upper" aria-pressed="false">Upper-case (Group 2)</button>
+    </div>
+
+    <h3>Letters (choose 3 to 7)</h3>
+    <div class="letters" id="letter-grid" role="group" aria-label="Letters"></div>
+    <p class="hint" id="letter-count"></p>
+
+    <h3>Other letters shown with the match</h3>
+    <div class="seg" id="distractor-seg" role="group" aria-label="Distractors">
+      <button data-v="1" aria-pressed="false">1</button>
+      <button data-v="2" aria-pressed="true">2</button>
+    </div>
+    <p class="hint" id="distractor-hint"></p>
+
+    <h3>Times each letter comes up</h3>
+    <div class="seg" id="reps-seg" role="group" aria-label="Repetitions">
+      <button data-v="1" aria-pressed="false">Once</button>
+      <button data-v="2" aria-pressed="true">Twice</button>
+      <button data-v="3" aria-pressed="false">Three times</button>
+    </div>
+    <p class="hint" id="duration-hint"></p>
+
+    <h3>Hand</h3>
+    <div class="seg" id="hand-seg" role="group" aria-label="Handedness">
+      <button data-v="right" aria-pressed="true">Right hand</button>
+      <button data-v="left" aria-pressed="false">Left hand</button>
+    </div>
+
+    <h3>Sound effects</h3>
+    <div class="seg" id="sfx-seg" role="group" aria-label="Sound effects">
+      <button data-v="1" aria-pressed="true">On</button>
+      <button data-v="0" aria-pressed="false">Off</button>
+    </div>
+    <p class="hint">Narration cannot be muted. It can always be replayed with the speaker button.</p>
+
+    <h3>Voice</h3>
+    <div class="field"><select id="voice-select" aria-label="Narration voice"></select><span class="hint" id="voice-hint"></span></div>
+
+    <div class="row" style="justify-content:flex-start;margin-top:14px">
+      <button class="small-btn is-primary" id="apply-btn">Apply and restart</button>
+      <button class="small-btn" id="copy-link-btn">Copy link</button>
+    </div>
+    <div class="field" style="margin-top:10px"><input type="text" id="share-link" readonly aria-label="Link to this configuration"></div>
+
+    <h3>About this activity</h3>
+    <p><b>Corpus entry ORT-01.</b> Orthographic Knowledge › Tactile Only › See, Match › <i>See Letter, Touch Matching Letter</i>.</p>
+    <p><b>Units.</b> Letter Units, Group 1 (lower-case a–z) or Group 2 (upper-case A–Z), one case per run. Each run uses 3–7 letters.</p>
+    <p><b>The exercise.</b> The child sees a letter at the top and touches the letter below that is the same. The other letters are look-alikes for that letter (b with d and p, m with n), so the child has to look at the letter's parts, not just its outline. No letter name or sound is ever spoken: this is a looking task, a short warm-up for naming and sound work.</p>
+    <p><b>Scoring.</b> The first touch on each item is the score (correct or not). A wrong first touch is shown and explained, the child touches the match, and the letter comes back later in the run. Because guessing is easy with two to four choices, mastery needs 90% or better over at least 10 items across two sessions; this page reports items and does not decide mastery.</p>
+    <p><b>What it reports.</b> Per item: the letter, the letters shown and where, which one was touched, the kind of mix-up (reversal such as b for d, look-alike, or other), how quickly, whether help came first, and whether a run of fast mistakes slowed the pace.</p>
+
+    <h3>Open decisions carried in this build</h3>
+    <div class="flag"><b>Narration voice</b>Until recorded narration exists, narration uses the device's built-in speech. Every line is keyed in the narration manifest for recording. Delivery mode is stamped on every result.</div>
+    <div class="flag"><b>Feature lines</b>The "why" lines ("This one has a tall stick, then the ball.") are drafted for this build and need a tutor's review. They avoid letter names on purpose.</div>
+    <div class="flag"><b>Guessing threshold</b>A wrong touch faster than 1 second counts as fast. Two fast wrong touches within four items slow the pace. Starting values to tune on real use.</div>
+
+    <h3>Manifest</h3>
+    <textarea id="manifest-out" readonly aria-label="Activity manifest"></textarea>
+    <h3>Narration manifest</h3>
+    <textarea id="narration-out" readonly aria-label="Narration manifest"></textarea>
+    <h3>Last results</h3>
+    <textarea id="results-out" readonly aria-label="Results"></textarea>
+    <div class="row" style="justify-content:flex-start;margin-top:8px"><button class="small-btn" id="copy-results-btn">Copy results</button></div>
+  </aside>
+</div>
+
+<!-- ===== Letterforms (TR-7 stroke files, ball-and-stick convention v1). Frame: width 100; ascender y=0, x-height y=50, baseline y=150, descender y=200. Letters are drawn from these paths. ===== -->
+<script type="application/json" id="stroke-data">
+{
+  "version": "1.0.0",
+  "font_ref": "ball-and-stick-vertical-manuscript-v1",
+  "convention_note": "Ball-and-stick vertical manuscript adopted for the repository (Activity Corpus, Appendix F decision 1, 2026-10-15). Lower-case: single-story a and g; circle letters start at about 2 o'clock and go counter-clockwise; b, h, m, n, p, r, u are one stroke that retraces up the stem; letters that start with a circle (a, d, g, q) start with the circle, letters that start with a stick (b, p) start with the stick. See the convention document for every rule and accepted variant.",
+  "frame": {"width": 100, "ascender_y": 0, "x_height_y": 50, "baseline_y": 150, "descender_y": 200, "x_height": 100},
+  "dsl": "M x y = start; L x y = line; A cx cy r a0 a1 = circular arc; E cx cy rx ry a0 a1 = elliptical arc. Angles in degrees, y down, 0 = right, 90 = down; increasing angle is clockwise on screen.",
+  "start_hints": {"top": "Start at the top.", "dot": "Start at the dot."},
+  "convention": "Activity Compilation/handwriting/Ball-and-Stick Stroke Convention.md",
+  "letters": {
+    "a": {"strokes": [{"name": "circle", "d": "A 50 100 48 315 -45", "hint": "dot"}, {"name": "stick", "d": "M 98 50 L 98 150", "hint": "top"}], "formation": "Around, then down.", "confusions": {"visual": ["o", "c", "e", "u"], "name": ["j", "k"]}, "accepted_variants": [{"kind": "c-then-up", "note": "A c-curve that pushes up the right side and pulls down (one continuous stroke) is accepted in place of circle, lift, stick."}]},
+    "b": {"strokes": [{"name": "stem-and-bowl", "d": "M 5 0 L 5 150 L 5 50 L 50 50 A 50 100 50 270 450 L 5 150", "hint": "top"}], "formation": "Down, up, and around.", "confusions": {"visual": ["d", "p", "q", "h"], "name": ["d", "p", "v", "e", "t"]}, "accepted_variants": [{"kind": "lift-at-retrace", "note": "Lifting where the path doubles back on itself, then continuing, is accepted (scorer retraceSkip)."}]},
+    "c": {"strokes": [{"name": "curve", "d": "A 50 100 48 315 45", "hint": "dot"}], "formation": "Around.", "confusions": {"visual": ["o", "e", "a", "u"], "name": ["e", "b", "d", "z"]}, "accepted_variants": []},
+    "d": {"strokes": [{"name": "circle", "d": "A 50 100 48 315 -45", "hint": "dot"}, {"name": "stem", "d": "M 98 0 L 98 150", "hint": "top"}], "formation": "Around, then up high and down.", "confusions": {"visual": ["b", "p", "q", "a"], "name": ["b", "p", "t", "e"]}, "accepted_variants": [{"kind": "c-then-up", "note": "A c-curve that pushes up the right side and pulls down (one continuous stroke) is accepted in place of circle, lift, stick."}]},
+    "e": {"strokes": [{"name": "bar-and-curve", "d": "M 2 100 L 98 100 A 50 100 48 0 -315", "hint": "dot"}], "formation": "Across, then around.", "confusions": {"visual": ["c", "o", "a"], "name": ["b", "c", "d", "p"]}, "accepted_variants": []},
+    "f": {"strokes": [{"name": "hook-stem", "d": "A 55 32 30 340 180 L 25 150", "hint": "top"}, {"name": "cross", "d": "M 5 50 L 48 50", "hint": "dot"}], "formation": "Curve down, then across.", "confusions": {"visual": ["t", "r", "j"], "name": ["s", "x", "l", "m", "n"]}, "accepted_variants": [{"kind": "crossbar-right-to-left", "note": "For learners set to left-handed, a crossbar drawn right to left is accepted."}]},
+    "g": {"strokes": [{"name": "circle", "d": "A 50 100 48 315 -45", "hint": "dot"}, {"name": "tail", "d": "M 98 50 L 98 165 A 63 165 35 0 180", "hint": "top"}], "formation": "Around, down, then hook.", "confusions": {"visual": ["q", "y", "a", "p"], "name": ["j", "b", "d"]}, "accepted_variants": [{"kind": "c-then-up", "note": "A c-curve that pushes up the right side and pulls down (one continuous stroke) is accepted in place of circle, lift, stick."}]},
+    "h": {"strokes": [{"name": "stem-and-hump", "d": "M 5 0 L 5 150 L 5 85 E 50 85 45 35 180 360 L 95 150", "hint": "top"}], "formation": "Down, up, and over.", "confusions": {"visual": ["n", "b", "k"], "name": ["a", "k"]}, "accepted_variants": [{"kind": "lift-at-retrace", "note": "Lifting where the path doubles back on itself, then continuing, is accepted (scorer retraceSkip)."}]},
+    "i": {"strokes": [{"name": "stem", "d": "M 50 50 L 50 150", "hint": "top"}, {"name": "dot", "d": "M 50 22 L 50 28", "hint": "dot"}], "formation": "Down, then dot.", "confusions": {"visual": ["j", "l", "t"], "name": ["y"]}, "accepted_variants": []},
+    "j": {"strokes": [{"name": "stem-hook", "d": "M 60 50 L 60 165 A 30 165 30 0 180", "hint": "top"}, {"name": "dot", "d": "M 60 22 L 60 28", "hint": "dot"}], "formation": "Down, hook, then dot.", "confusions": {"visual": ["i", "g", "y"], "name": ["g", "a", "k"]}, "accepted_variants": []},
+    "k": {"strokes": [{"name": "stem", "d": "M 5 0 L 5 150", "hint": "top"}, {"name": "in-out", "d": "M 70 55 L 5 108 L 75 150", "hint": "dot"}], "formation": "Down, then in and out.", "confusions": {"visual": ["h", "x", "y"], "name": ["a", "j"]}, "accepted_variants": []},
+    "l": {"strokes": [{"name": "stem", "d": "M 50 0 L 50 150", "hint": "top"}], "formation": "Down.", "confusions": {"visual": ["i", "t", "j"], "name": ["m", "n", "f", "s"]}, "accepted_variants": []},
+    "m": {"strokes": [{"name": "stem-and-humps", "d": "M 5 50 L 5 150 L 5 85 E 28 85 23 35 180 360 L 51 150 L 51 85 E 74 85 23 35 180 360 L 97 150", "hint": "top"}], "formation": "Down, up, over, up, over.", "confusions": {"visual": ["n", "w", "u"], "name": ["n", "l", "f"]}, "accepted_variants": [{"kind": "lift-at-retrace", "note": "Lifting where the path doubles back on itself, then continuing, is accepted (scorer retraceSkip)."}]},
+    "n": {"strokes": [{"name": "stem-and-hump", "d": "M 5 50 L 5 150 L 5 85 E 50 85 45 35 180 360 L 95 150", "hint": "top"}], "formation": "Down, up, and over.", "confusions": {"visual": ["m", "h", "u", "r"], "name": ["m", "l", "f"]}, "accepted_variants": [{"kind": "lift-at-retrace", "note": "Lifting where the path doubles back on itself, then continuing, is accepted (scorer retraceSkip)."}]},
+    "o": {"strokes": [{"name": "circle", "d": "A 50 100 48 315 -45", "hint": "dot"}], "formation": "Around.", "confusions": {"visual": ["a", "c", "e", "u"], "name": ["u", "w"]}, "accepted_variants": []},
+    "p": {"strokes": [{"name": "stem-and-bowl", "d": "M 5 50 L 5 200 L 5 50 L 50 50 A 50 100 50 270 450 L 5 150", "hint": "top"}], "formation": "Down low, up, and around.", "confusions": {"visual": ["q", "b", "d", "g"], "name": ["b", "d", "t", "v"]}, "accepted_variants": [{"kind": "lift-at-retrace", "note": "Lifting where the path doubles back on itself, then continuing, is accepted (scorer retraceSkip)."}]},
+    "q": {"strokes": [{"name": "circle", "d": "A 50 100 48 315 -45", "hint": "dot"}, {"name": "stem", "d": "M 98 50 L 98 200", "hint": "top"}], "formation": "Around, then down low.", "confusions": {"visual": ["p", "g", "d", "b"], "name": ["u", "w", "k"]}, "accepted_variants": [{"kind": "c-then-up", "note": "A c-curve that pushes up the right side and pulls down (one continuous stroke) is accepted in place of circle, lift, stick."}]},
+    "r": {"strokes": [{"name": "stem-and-arm", "d": "M 5 50 L 5 150 L 5 85 E 45 85 40 35 180 330", "hint": "top"}], "formation": "Down, up, and over.", "confusions": {"visual": ["n", "f", "v"], "name": ["o", "a"]}, "accepted_variants": [{"kind": "lift-at-retrace", "note": "Lifting where the path doubles back on itself, then continuing, is accepted (scorer retraceSkip)."}]},
+    "s": {"strokes": [{"name": "curves", "d": "A 50 75 25 330 90 A 50 125 25 270 510", "hint": "dot"}], "formation": "Curve, then curve back.", "confusions": {"visual": ["z", "c", "e"], "name": ["f", "x", "m", "n"]}, "accepted_variants": []},
+    "t": {"strokes": [{"name": "stem", "d": "M 50 15 L 50 150", "hint": "top"}, {"name": "cross", "d": "M 25 50 L 75 50", "hint": "dot"}], "formation": "Down, then across.", "confusions": {"visual": ["f", "l", "i", "j"], "name": ["d", "b", "p", "v"]}, "accepted_variants": [{"kind": "crossbar-right-to-left", "note": "For learners set to left-handed, a crossbar drawn right to left is accepted."}]},
+    "u": {"strokes": [{"name": "cup", "d": "M 5 50 L 5 105 A 50 105 45 180 0 L 95 50 L 95 150", "hint": "top"}], "formation": "Down, around, up, down.", "confusions": {"visual": ["n", "v", "y", "o"], "name": ["q", "w"]}, "accepted_variants": [{"kind": "lift-at-retrace", "note": "Lifting where the path doubles back on itself, then continuing, is accepted (scorer retraceSkip)."}]},
+    "v": {"strokes": [{"name": "vee", "d": "M 5 50 L 50 150 L 95 50", "hint": "top"}], "formation": "Slant down, slant up.", "confusions": {"visual": ["u", "w", "y", "x"], "name": ["b", "d", "p", "t"]}, "accepted_variants": []},
+    "w": {"strokes": [{"name": "zigzag", "d": "M 2 50 L 26 150 L 50 50 L 74 150 L 98 50", "hint": "top"}], "formation": "Down, up, down, up.", "confusions": {"visual": ["v", "m", "u"], "name": ["u", "q"]}, "accepted_variants": []},
+    "x": {"strokes": [{"name": "slant", "d": "M 5 50 L 95 150", "hint": "top"}, {"name": "slant-back", "d": "M 95 50 L 5 150", "hint": "top"}], "formation": "Slant, then slant.", "confusions": {"visual": ["k", "y", "v", "z"], "name": ["s", "f"]}, "accepted_variants": []},
+    "y": {"strokes": [{"name": "slant", "d": "M 5 50 L 50 150", "hint": "top"}, {"name": "long-slant", "d": "M 95 50 L 28 200", "hint": "top"}], "formation": "Slant, then long slant.", "confusions": {"visual": ["v", "g", "j", "u"], "name": ["i"]}, "accepted_variants": []},
+    "z": {"strokes": [{"name": "zed", "d": "M 5 50 L 95 50 L 5 150 L 95 150", "hint": "top"}], "formation": "Across, slant, across.", "confusions": {"visual": ["s", "n", "x"], "name": ["c", "b", "d", "e"]}, "accepted_variants": []}
+  }
+}
+</script>
+<script type="application/json" id="stroke-data-upper">
+{
+  "version": "1.0.0",
+  "font_ref": "ball-and-stick-vertical-manuscript-v1",
+  "convention_note": "Ball-and-stick vertical manuscript adopted for the repository (Activity Corpus, Appendix F decision 1, 2026-10-15). Capitals fill y 0..150. Start at the top; a vertical stem comes first and is its own stroke; what follows the stem starts at the top of the stem and continues without a lift where the path is unbroken (B, D, K, M, N, P, R); round letters go counter-clockwise from about 2 o'clock. Keys are lower-case; the page maps case at render time. See the convention document.",
+  "frame": {"width": 100, "ascender_y": 0, "x_height_y": 50, "baseline_y": 150, "descender_y": 200, "x_height": 100},
+  "dsl": "M x y = start; L x y = line; A cx cy r a0 a1 = circular arc; E cx cy rx ry a0 a1 = elliptical arc. Angles in degrees, y down, 0 = right, 90 = down; increasing angle is clockwise on screen.",
+  "start_hints": {"top": "Start at the top.", "dot": "Start at the dot."},
+  "convention": "Activity Compilation/handwriting/Ball-and-Stick Stroke Convention.md",
+  "letters": {
+    "a": {"strokes": [{"name": "left-slant", "d": "M 50 0 L 5 150", "hint": "top"}, {"name": "right-slant", "d": "M 50 0 L 95 150", "hint": "top"}, {"name": "cross", "d": "M 20 100 L 80 100", "hint": "dot"}], "formation": "Slant, slant, then across.", "confusions": {"visual": ["h", "v", "r"], "name": ["j", "k"]}, "accepted_variants": [{"kind": "crossbar-right-to-left", "note": "For learners set to left-handed, a crossbar drawn right to left is accepted."}]},
+    "b": {"strokes": [{"name": "stem", "d": "M 5 0 L 5 150", "hint": "top"}, {"name": "bowls", "d": "M 5 0 L 40 0 E 40 38 36 38 270 450 L 5 76 L 42 76 E 42 113 44 37 270 450 L 5 150", "hint": "top"}], "formation": "Down, then around, around.", "confusions": {"visual": ["d", "p", "r"], "name": ["d", "p", "v", "e", "t"]}, "accepted_variants": []},
+    "c": {"strokes": [{"name": "curve", "d": "E 50 75 45 73 315 45", "hint": "dot"}], "formation": "Around.", "confusions": {"visual": ["g", "o", "q"], "name": ["e", "b", "d", "z"]}, "accepted_variants": []},
+    "d": {"strokes": [{"name": "stem", "d": "M 5 0 L 5 150", "hint": "top"}, {"name": "bowl", "d": "M 5 0 L 30 0 E 30 75 65 75 270 450 L 5 150", "hint": "top"}], "formation": "Down, then around.", "confusions": {"visual": ["b", "o", "p"], "name": ["b", "p", "t", "e"]}, "accepted_variants": []},
+    "e": {"strokes": [{"name": "stem", "d": "M 5 0 L 5 150", "hint": "top"}, {"name": "top-bar", "d": "M 5 0 L 90 0", "hint": "top"}, {"name": "middle-bar", "d": "M 5 75 L 75 75", "hint": "dot"}, {"name": "bottom-bar", "d": "M 5 150 L 90 150", "hint": "dot"}], "formation": "Down, across, across, across.", "confusions": {"visual": ["f", "b"], "name": ["b", "c", "d", "p"]}, "accepted_variants": [{"kind": "crossbar-right-to-left", "note": "For learners set to left-handed, a crossbar drawn right to left is accepted."}]},
+    "f": {"strokes": [{"name": "stem", "d": "M 5 0 L 5 150", "hint": "top"}, {"name": "top-bar", "d": "M 5 0 L 90 0", "hint": "top"}, {"name": "middle-bar", "d": "M 5 75 L 75 75", "hint": "dot"}], "formation": "Down, across, across.", "confusions": {"visual": ["e", "p", "t"], "name": ["s", "x", "l", "m", "n"]}, "accepted_variants": [{"kind": "crossbar-right-to-left", "note": "For learners set to left-handed, a crossbar drawn right to left is accepted."}]},
+    "g": {"strokes": [{"name": "curve", "d": "E 50 75 45 73 315 10", "hint": "dot"}, {"name": "bar-in", "d": "M 95 88 L 55 88", "hint": "dot"}], "formation": "Around, then in.", "confusions": {"visual": ["c", "o", "q"], "name": ["j", "b", "d"]}, "accepted_variants": []},
+    "h": {"strokes": [{"name": "left-stem", "d": "M 5 0 L 5 150", "hint": "top"}, {"name": "right-stem", "d": "M 95 0 L 95 150", "hint": "top"}, {"name": "cross", "d": "M 5 75 L 95 75", "hint": "dot"}], "formation": "Down, down, then across.", "confusions": {"visual": ["n", "m", "a"], "name": ["a", "k"]}, "accepted_variants": [{"kind": "crossbar-right-to-left", "note": "For learners set to left-handed, a crossbar drawn right to left is accepted."}]},
+    "i": {"strokes": [{"name": "stem", "d": "M 50 0 L 50 150", "hint": "top"}, {"name": "top-bar", "d": "M 25 0 L 75 0", "hint": "top"}, {"name": "bottom-bar", "d": "M 25 150 L 75 150", "hint": "dot"}], "formation": "Down, across, across.", "confusions": {"visual": ["l", "t", "j"], "name": ["y"]}, "accepted_variants": [{"kind": "crossbar-right-to-left", "note": "For learners set to left-handed, a crossbar drawn right to left is accepted."}]},
+    "j": {"strokes": [{"name": "stem-hook", "d": "M 65 0 L 65 120 A 42 120 23 0 150", "hint": "top"}], "formation": "Down, then hook.", "confusions": {"visual": ["i", "l", "u"], "name": ["g", "a", "k"]}, "accepted_variants": []},
+    "k": {"strokes": [{"name": "stem", "d": "M 5 0 L 5 150", "hint": "top"}, {"name": "in-and-out", "d": "M 85 0 L 5 85 L 90 150", "hint": "dot"}], "formation": "Down, then in and out.", "confusions": {"visual": ["x", "r"], "name": ["a", "j"]}, "accepted_variants": [{"kind": "lift-at-vertex", "note": "Lifting at the stem between the in and out slants is accepted."}]},
+    "l": {"strokes": [{"name": "stem", "d": "M 5 0 L 5 150", "hint": "top"}, {"name": "bottom-bar", "d": "M 5 150 L 90 150", "hint": "dot"}], "formation": "Down, then across.", "confusions": {"visual": ["i", "e", "j"], "name": ["m", "n", "f", "s"]}, "accepted_variants": []},
+    "m": {"strokes": [{"name": "left-stem", "d": "M 5 0 L 5 150", "hint": "top"}, {"name": "slants-and-stem", "d": "M 5 0 L 50 110 L 95 0 L 95 150", "hint": "dot"}], "formation": "Down, then slant down, slant up, down.", "confusions": {"visual": ["n", "w"], "name": ["n", "l", "f"]}, "accepted_variants": [{"kind": "lift-at-vertex", "note": "Lifting at the point or at the top right corner is accepted."}]},
+    "n": {"strokes": [{"name": "left-stem", "d": "M 5 0 L 5 150", "hint": "top"}, {"name": "slant-and-stem", "d": "M 5 0 L 95 150 L 95 0", "hint": "dot"}], "formation": "Down, then slant down, up.", "confusions": {"visual": ["m", "h"], "name": ["m", "l", "f"]}, "accepted_variants": [{"kind": "lift-at-vertex", "note": "Lifting at the bottom right corner is accepted."}]},
+    "o": {"strokes": [{"name": "circle", "d": "E 50 75 45 73 315 -45", "hint": "dot"}], "formation": "Around.", "confusions": {"visual": ["q", "c", "g", "d"], "name": ["u", "w"]}, "accepted_variants": []},
+    "p": {"strokes": [{"name": "stem", "d": "M 5 0 L 5 150", "hint": "top"}, {"name": "bowl", "d": "M 5 0 L 42 0 E 42 40 45 40 270 450 L 5 80", "hint": "top"}], "formation": "Down, then around.", "confusions": {"visual": ["b", "r"], "name": ["b", "d", "t", "v"]}, "accepted_variants": []},
+    "q": {"strokes": [{"name": "circle", "d": "E 50 75 45 73 315 -45", "hint": "dot"}, {"name": "tail", "d": "M 62 120 L 88 165", "hint": "dot"}], "formation": "Around, then slant.", "confusions": {"visual": ["o", "g"], "name": ["u", "w", "k"]}, "accepted_variants": []},
+    "r": {"strokes": [{"name": "stem", "d": "M 5 0 L 5 150", "hint": "top"}, {"name": "bowl-and-leg", "d": "M 5 0 L 42 0 E 42 40 45 40 270 450 L 5 80 L 90 150", "hint": "dot"}], "formation": "Down, then around and slant.", "confusions": {"visual": ["p", "b", "k"], "name": ["o", "a"]}, "accepted_variants": [{"kind": "lift-at-vertex", "note": "Lifting where the bowl meets the stem, then drawing the leg, is accepted."}]},
+    "s": {"strokes": [{"name": "curves", "d": "E 50 36 36 36 330 90 E 50 111 41 39 270 510", "hint": "dot"}], "formation": "Curve, then curve back.", "confusions": {"visual": ["z", "c"], "name": ["f", "x", "m", "n"]}, "accepted_variants": []},
+    "t": {"strokes": [{"name": "stem", "d": "M 50 0 L 50 150", "hint": "top"}, {"name": "top-bar", "d": "M 5 0 L 95 0", "hint": "top"}], "formation": "Down, then across.", "confusions": {"visual": ["i", "f", "l"], "name": ["d", "b", "p", "v"]}, "accepted_variants": [{"kind": "crossbar-right-to-left", "note": "For learners set to left-handed, a crossbar drawn right to left is accepted."}]},
+    "u": {"strokes": [{"name": "cup", "d": "M 5 0 L 5 105 A 50 105 45 180 0 L 95 0", "hint": "top"}], "formation": "Down, around, then up.", "confusions": {"visual": ["v", "y"], "name": ["q", "w"]}, "accepted_variants": []},
+    "v": {"strokes": [{"name": "vee", "d": "M 5 0 L 50 150 L 95 0", "hint": "top"}], "formation": "Slant down, slant up.", "confusions": {"visual": ["u", "y", "w"], "name": ["b", "d", "p", "t"]}, "accepted_variants": [{"kind": "lift-at-vertex", "note": "Lifting at the point is accepted."}]},
+    "w": {"strokes": [{"name": "zigzag", "d": "M 2 0 L 26 150 L 50 0 L 74 150 L 98 0", "hint": "top"}], "formation": "Down, up, down, up.", "confusions": {"visual": ["m", "v", "u"], "name": ["u", "q"]}, "accepted_variants": [{"kind": "lift-at-vertex", "note": "Lifting at any point is accepted."}]},
+    "x": {"strokes": [{"name": "slant", "d": "M 5 0 L 95 150", "hint": "top"}, {"name": "slant-back", "d": "M 95 0 L 5 150", "hint": "top"}], "formation": "Slant, then slant.", "confusions": {"visual": ["k", "y", "v"], "name": ["s", "f"]}, "accepted_variants": []},
+    "y": {"strokes": [{"name": "left-slant", "d": "M 5 0 L 50 75", "hint": "top"}, {"name": "right-slant-and-stem", "d": "M 95 0 L 50 75 L 50 150", "hint": "dot"}], "formation": "Slant, then slant and down.", "confusions": {"visual": ["v", "x", "u"], "name": ["i"]}, "accepted_variants": [{"kind": "lift-at-vertex", "note": "Three strokes (slant, slant, down) are accepted."}]},
+    "z": {"strokes": [{"name": "zed", "d": "M 5 0 L 95 0 L 5 150 L 95 150", "hint": "top"}], "formation": "Across, slant, across.", "confusions": {"visual": ["s", "n"], "name": ["c", "b", "d", "e"]}, "accepted_variants": []}
+  }
+}
+</script>
+
+<!-- ===== Distinguishing-feature lines and highlight parts (letter-features.json). ===== -->
+<script type="application/json" id="feature-data">
+{
+  "version": "1.0.0",
+  "note": "One distinguishing-feature line per letter, used by the model step and the error demonstration (corpus ORT family note: 'the system shows the match and says why'). Each line is written to separate the letter from the look-alikes in its stroke file's confusions.visual list, and never says a letter name or sound, so the activity stays a visual match (ORT-01 is Tactile Only). 'hl' lists the parts that light up, in the order the line names them; each step is one DSL path or a list of paths drawn together, in the stroke-file frame.",
+  "lower": {
+    "a": {"say": "This one is round, with a short stick.", "hl": ["A 50 100 48 315 -45", "M 98 50 L 98 150"]},
+    "b": {"say": "This one has a tall stick, then the ball.", "hl": ["M 5 0 L 5 150", "M 5 50 L 50 50 A 50 100 50 270 450 L 5 150"]},
+    "c": {"say": "This one is round, with an opening.", "hl": ["A 50 100 48 315 45"]},
+    "d": {"say": "This one has the ball first, then a tall stick.", "hl": ["A 50 100 48 315 -45", "M 98 0 L 98 150"]},
+    "e": {"say": "This one has a line across the middle.", "hl": ["M 2 100 L 98 100"]},
+    "f": {"say": "This one has a hook at the top, and a line across.", "hl": ["A 55 32 30 340 180", "M 5 50 L 48 50"]},
+    "g": {"say": "This one has a ball, then a tail that hooks.", "hl": ["A 50 100 48 315 -45", "M 98 50 L 98 165 A 63 165 35 0 180"]},
+    "h": {"say": "This one has a tall stick, then a hump.", "hl": ["M 5 0 L 5 150", "M 5 85 E 50 85 45 35 180 360 L 95 150"]},
+    "i": {"say": "This one is a short stick, with a dot.", "hl": ["M 50 50 L 50 150", "M 50 22 L 50 28"]},
+    "j": {"say": "This one hooks below the line, with a dot.", "hl": ["M 60 50 L 60 165 A 30 165 30 0 180", "M 60 22 L 60 28"]},
+    "k": {"say": "This one has a tall stick, then two slanted lines.", "hl": ["M 5 0 L 5 150", "M 70 55 L 5 108 L 75 150"]},
+    "l": {"say": "This one is one tall stick.", "hl": ["M 50 0 L 50 150"]},
+    "m": {"say": "This one has two humps.", "hl": ["M 5 85 E 28 85 23 35 180 360 L 51 150", "M 51 85 E 74 85 23 35 180 360 L 97 150"]},
+    "n": {"say": "This one has a short stick, and one hump.", "hl": ["M 5 50 L 5 150", "M 5 85 E 50 85 45 35 180 360 L 95 150"]},
+    "o": {"say": "This one is a circle, all the way around.", "hl": ["A 50 100 48 315 -45"]},
+    "p": {"say": "This one has a stick that goes down low, then the ball.", "hl": ["M 5 50 L 5 200", "M 5 50 L 50 50 A 50 100 50 270 450 L 5 150"]},
+    "q": {"say": "This one has the ball first, then a stick that goes down low.", "hl": ["A 50 100 48 315 -45", "M 98 50 L 98 200"]},
+    "r": {"say": "This one has a short stick, with a little arm.", "hl": ["M 5 50 L 5 150", "M 5 85 E 45 85 40 35 180 330"]},
+    "s": {"say": "This one curves one way, then the other way.", "hl": ["A 50 75 25 330 90", "A 50 125 25 270 510"]},
+    "t": {"say": "This one has a stick, with a line across it.", "hl": ["M 50 15 L 50 150", "M 25 50 L 75 50"]},
+    "u": {"say": "This one is a cup, open at the top.", "hl": ["M 5 50 L 5 105 A 50 105 45 180 0 L 95 50"]},
+    "v": {"say": "This one is two lines that meet in a point.", "hl": ["M 5 50 L 50 150 L 95 50"]},
+    "w": {"say": "This one has two points at the bottom.", "hl": ["M 2 50 L 26 150 L 50 50 L 74 150 L 98 50"]},
+    "x": {"say": "This one is two lines that cross.", "hl": [["M 5 50 L 95 150", "M 95 50 L 5 150"]]},
+    "y": {"say": "This one has a long line that goes down below.", "hl": ["M 95 50 L 28 200"]},
+    "z": {"say": "This one goes across, slants down, then across.", "hl": ["M 5 50 L 95 50", "M 95 50 L 5 150", "M 5 150 L 95 150"]}
+  },
+  "upper": {
+    "a": {"say": "This one has two lines that meet at the top, and a line across.", "hl": [["M 50 0 L 5 150", "M 50 0 L 95 150"], "M 20 100 L 80 100"]},
+    "b": {"say": "This one has a stick, then two bumps.", "hl": ["M 5 0 L 5 150", "M 5 0 L 40 0 E 40 38 36 38 270 450 L 5 76 L 42 76 E 42 113 44 37 270 450 L 5 150"]},
+    "c": {"say": "This one is round, with an opening.", "hl": ["E 50 75 45 73 315 45"]},
+    "d": {"say": "This one has a stick, then one big bump.", "hl": ["M 5 0 L 5 150", "M 5 0 L 30 0 E 30 75 65 75 270 450 L 5 150"]},
+    "e": {"say": "This one has a stick, and three lines across.", "hl": ["M 5 0 L 5 150", ["M 5 0 L 90 0", "M 5 75 L 75 75", "M 5 150 L 90 150"]]},
+    "f": {"say": "This one has a stick, and two lines across.", "hl": ["M 5 0 L 5 150", ["M 5 0 L 90 0", "M 5 75 L 75 75"]]},
+    "g": {"say": "This one is round, with a little line going in.", "hl": ["E 50 75 45 73 315 10", "M 95 88 L 55 88"]},
+    "h": {"say": "This one has two sticks, with a line across the middle.", "hl": [["M 5 0 L 5 150", "M 95 0 L 95 150"], "M 5 75 L 95 75"]},
+    "i": {"say": "This one is a stick, with lines across the top and bottom.", "hl": ["M 50 0 L 50 150", ["M 25 0 L 75 0", "M 25 150 L 75 150"]]},
+    "j": {"say": "This one goes down, then hooks at the bottom.", "hl": ["M 65 0 L 65 120", "A 42 120 23 0 150"]},
+    "k": {"say": "This one has a stick, then two slanted lines.", "hl": ["M 5 0 L 5 150", "M 85 0 L 5 85 L 90 150"]},
+    "l": {"say": "This one has a stick, with a line across the bottom.", "hl": ["M 5 0 L 5 150", "M 5 150 L 90 150"]},
+    "m": {"say": "This one has two sticks, and the middle comes down to a point.", "hl": [["M 5 0 L 5 150", "M 95 0 L 95 150"], "M 5 0 L 50 110 L 95 0"]},
+    "n": {"say": "This one has two sticks, with one slanted line.", "hl": [["M 5 0 L 5 150", "M 95 0 L 95 150"], "M 5 0 L 95 150"]},
+    "o": {"say": "This one is a circle, all the way around.", "hl": ["E 50 75 45 73 315 -45"]},
+    "p": {"say": "This one has a stick, with a bump at the top.", "hl": ["M 5 0 L 5 150", "M 5 0 L 42 0 E 42 40 45 40 270 450 L 5 80"]},
+    "q": {"say": "This one is a circle, with a little tail.", "hl": ["E 50 75 45 73 315 -45", "M 62 120 L 88 165"]},
+    "r": {"say": "This one has a bump at the top, then a leg.", "hl": ["M 5 0 L 42 0 E 42 40 45 40 270 450 L 5 80", "M 5 80 L 90 150"]},
+    "s": {"say": "This one curves one way, then the other way.", "hl": ["E 50 36 36 36 330 90", "E 50 111 41 39 270 510"]},
+    "t": {"say": "This one has a stick, with a line across the top.", "hl": ["M 50 0 L 50 150", "M 5 0 L 95 0"]},
+    "u": {"say": "This one is a cup, open at the top.", "hl": ["M 5 0 L 5 105 A 50 105 45 180 0 L 95 0"]},
+    "v": {"say": "This one is two lines that meet in a point at the bottom.", "hl": ["M 5 0 L 50 150 L 95 0"]},
+    "w": {"say": "This one has two points at the bottom.", "hl": ["M 2 0 L 26 150 L 50 0 L 74 150 L 98 0"]},
+    "x": {"say": "This one is two lines that cross.", "hl": [["M 5 0 L 95 150", "M 95 0 L 5 150"]]},
+    "y": {"say": "This one has two short lines that meet, then a stick down.", "hl": [["M 5 0 L 50 75", "M 95 0 L 50 75"], "M 50 75 L 50 150"]},
+    "z": {"say": "This one goes across, slants down, then across.", "hl": ["M 5 0 L 95 0", "M 95 0 L 5 150", "M 5 150 L 95 150"]}
+  }
+}
+</script>
+
+<!-- ===== Narration templates (NA-10). Expanded at load into one complete utterance per key, never concatenated (NA-7). ===== -->
+<script type="application/json" id="narration-templates">
+{
+  "version": "1.0.0",
+  "voice_spec": {"register": "one warm, unhurried adult voice", "rate": "10-15% slower than conversational", "intonation": "falling on instructions, never quiz-show", "review": "every take reviewed so it never sounds disappointed, surprised, or impatient (TN-6)"},
+  "content_rule": "No line says a letter name or a letter sound. ORT-01 is a visual match; the feature lines describe parts (stick, ball, hump) and point with 'this one'.",
+  "asset_base": null,
+  "asset_pattern": "narration/{key}.mp3",
+  "utterances": [
+    {"key": "intro.guided", "text": "Look at the letter at the top. Touch the one that is the same.", "contexts": ["intro:guided", "intro:independent"]},
+    {"key": "intro.model", "text": "Watch, then touch the one that is the same.", "contexts": ["intro:model"]},
+    {"key": "resume", "text": "Let's keep going.", "contexts": ["resume"]},
+    {"key": "prompt", "text": "Touch the one that is the same.", "contexts": ["prompt", "replay", "reprompt:timeout"]},
+    {"key": "downhere", "text": "Find it down here.", "contexts": ["tap:target-card"]},
+    {"key": "lookfirst", "text": "Look at the letter first.", "contexts": ["pace:slowed"]},
+    {"key": "watch", "text": "Watch.", "contexts": ["model:start"]},
+    {"key": "look", "text": "Look.", "contexts": ["feedback:wrong-choice"]},
+    {"key": "same", "text": "This one is the same.", "contexts": ["model:match", "feedback:wrong-choice", "intervention:together"]},
+    {"key": "feature", "per_letter": true, "text": "{feature}", "contexts": ["model:why", "feedback:wrong-choice", "intervention:together"]},
+    {"key": "together", "text": "Let's do it together.", "contexts": ["intervention:consecutive-errors"]},
+    {"key": "yourturn", "text": "Your turn.", "contexts": ["model:handoff", "feedback:handoff", "intervention:handoff"]},
+    {"key": "later", "text": "We'll do that one again later.", "contexts": ["item:reattempt-failure"]},
+    {"key": "complete.3", "text": "That's all three.", "contexts": ["complete"]},
+    {"key": "complete.4", "text": "That's all four.", "contexts": ["complete"]},
+    {"key": "complete.5", "text": "That's all five.", "contexts": ["complete"]},
+    {"key": "complete.6", "text": "That's all six.", "contexts": ["complete"]},
+    {"key": "complete.7", "text": "That's all seven.", "contexts": ["complete"]},
+    {"key": "complete.partial", "text": "That's it for now.", "contexts": ["complete:ceiling", "complete:abandon"]}
+  ]
+}
+</script>
+
+<!-- ===== Activity manifest (RP-2). Runtime fills group, phase, units, unit_count, and id from the configuration. ===== -->
+<script type="application/json" id="activity-manifest">
+{
+  "id": "orth-see-match-letters-g1-guided",
+  "id_pattern": "orth-see-match-letters-{group}-{phase}",
+  "version": "1.0.0",
+  "corpus_entry": "Orthographic Knowledge › Tactile Only › See, Match › See Letter, Touch Matching Letter",
+  "corpus_entry_id": "ORT-01",
+  "corpus_deviations": [],
+  "build_flags": [
+    {"rule": "NA-6", "status": "open", "note": "Narration is delivered by the device's built-in speech synthesis until pre-generated voice assets are produced. All utterances are keyed in narration-manifest.json; set asset_base to switch to cached assets. Delivery mode is stamped on every item record as narration_delivery."},
+    {"rule": "TR-7 / Appendix F decision 1", "status": "resolved", "note": "Letters are drawn from the repository's ball-and-stick stroke files (strokes-lowercase.json, strokes-uppercase.json, convention v1), so the letterforms match the tracing activities. No tracing is scored here."},
+    {"rule": "feature lines", "status": "proposed", "note": "The 'shows the match and says why' lines (letter-features.json) are drafted for this build: one per letter, written against that letter's confusions.visual list, no letter names or sounds. Need tutor review."},
+    {"rule": "F-11", "status": "default", "note": "Fast-and-wrong = a wrong first touch under 1000 ms from the options appearing (faster than the M-6 fluent letter row). Two within the last four items set the run to slowed pace: the letter is shown alone for 1.5 s with 'Look at the letter first.' before the choices appear, and error demonstrations drop the feature line (do not reteach). Three first-try correct items in a row restore the normal pace."},
+    {"rule": "E-SELECT / P-2", "status": "default", "note": "Each unit is presented twice per run by default (reps=2), so a 5-letter run yields 10 scored first responses; mastery (>=90% over >=10 items across two sessions) is decided by the session layer, not here."},
+    {"rule": "M-6 × AC-11", "status": "default", "note": "Letter row: acceptable 2 s × 1.5 = 3 s, measured from the choices appearing to the first touch. Timeout 6 s (R-9)."}
+  ],
+  "target_skill": "visual discrimination of a letter-symbol from look-alike letters of the same case (identity match)",
+  "domain": "orthographic",
+  "phase": "guided",
+  "supported_phases": ["model", "guided", "independent"],
+  "unit_type": "letter",
+  "unit_group": "Letter Units: Group 1 (lower-case a-z)",
+  "unit_groups_supported": {"g1": "Letter Units: Group 1 (lower-case a-z)", "g2": "Letter Units: Group 2 (upper-case A-Z)"},
+  "unit_pool": ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z"],
+  "units": ["b", "d", "p", "m", "s"],
+  "unit_count": 5,
+  "presentations_per_unit": 2,
+  "distractors_per_item": 2,
+  "distractor_rule": "same case; visual look-alikes from the stroke file's confusions.visual, preferring the run's own units (P-9, F-9); model and guided 1-2; independent starts at 2 and steps to 3 after three fast unhelped correct items, back to 2 after an error (P-10, P-11)",
+  "grade_level_equivalent": "Pre-K – Early K",
+  "modalities": ["visual", "tactile"],
+  "instruction_modality": "auditory (narrated instructions only; no letter name or sound is spoken)",
+  "response_modes": ["tap"],
+  "fallback_response_modes": [],
+  "evaluation": "Standard E-SELECT: dichotomous, first response only",
+  "prerequisites": [],
+  "est_duration_sec": 85,
+  "max_duration_sec": 180,
+  "band_default": "PreK-K",
+  "narration_manifest": "narration-manifest.json",
+  "assets": ["strokes-lowercase.json", "strokes-uppercase.json", "letter-features.json"],
+  "telemetry_schema": "v1",
+  "requires_microphone": false,
+  "requires_stylus": false,
+  "inputs": {
+    "url_params": {"phase": "model|guided|independent", "case": "lower|upper", "units": "comma-separated letters from unit_pool, 3-7", "distractors": "1|2 (model and guided)", "reps": "1|2|3 presentations per unit", "hand": "right|left", "sfx": "1|0", "seed": "integer for reproducible order", "parent_origin": "origin for postMessage"},
+    "outputs": ["window event 'activity:item'", "window event 'activity:result'", "postMessage {type:'activity:result'} to parent_origin or the referrer origin", "localStorage activity-results:<id>"]
+  }
+}
+</script>
+
+<script>
+'use strict';
+/* =====================================================================
+   1. Utilities
+   ===================================================================== */
+const $  = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+const now = () => performance.now();
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
+function mulberry32(seed) {
+  let t = seed >>> 0;
+  return function () {
+    t += 0x6D2B79F5;
+    let r = Math.imul(t ^ (t >>> 15), 1 | t);
+    r ^= r + Math.imul(r ^ (r >>> 7), 61 | r);
+    return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
+  };
+}
+let rng = Math.random;
+function shuffle(arr) { const a = arr.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+function pick(arr) { return arr[Math.floor(rng() * arr.length)]; }
+function readJSON(id) { const n = document.getElementById(id); if (!n) return null; try { return JSON.parse(n.textContent); } catch (e) { console.error('bad JSON block', id, e); return null; } }
+function safeStore(kind, key, value) { try { const s = kind === 'session' ? sessionStorage : localStorage; if (value === undefined) return JSON.parse(s.getItem(key)); if (value === null) { s.removeItem(key); return null; } s.setItem(key, JSON.stringify(value)); return value; } catch (e) { return null; } }
+
+/* =====================================================================
+   2. Letterforms. Every letter is drawn from the stroke files, so what
+      the child sees here is the same ball-and-stick form they trace in
+      the other activities (Appendix F decision 1).
+   ===================================================================== */
+const STROKES = { lower: readJSON('stroke-data'), upper: readJSON('stroke-data-upper') };
+const FEATURES = readJSON('feature-data');
+const NARR_T = readJSON('narration-templates');
+const MANIFEST_BASE = readJSON('activity-manifest');
+
+function parseDSL(d) {
+  const t = d.trim().split(/\s+/); let i = 0; const pts = [];
+  const push = (x, y) => { const l = pts[pts.length - 1]; if (!l || Math.hypot(l[0] - x, l[1] - y) > 0.01) pts.push([x, y]); };
+  while (i < t.length) {
+    const c = t[i++];
+    if (c === 'M' || c === 'L') { push(+t[i++], +t[i++]); }
+    else if (c === 'A' || c === 'E') {
+      const cx = +t[i++], cy = +t[i++], rx = +t[i++], ry = (c === 'E') ? +t[i++] : rx, a0 = +t[i++], a1 = +t[i++];
+      const n = Math.max(4, Math.ceil(Math.abs(a1 - a0) / 6));
+      for (let k = 0; k <= n; k++) { const a = (a0 + (a1 - a0) * k / n) * Math.PI / 180; push(cx + rx * Math.cos(a), cy + ry * Math.sin(a)); }
+    }
+  }
+  return pts;
+}
+function polyToPath(pts) { return pts.length === 1 ? `M ${pts[0][0]} ${pts[0][1]} L ${pts[0][0] + 0.1} ${pts[0][1]}` : pts.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' '); }
+
+const CASES = ['lower', 'upper'];
+const VIEWBOX = { lower: '-12 -14 124 228', upper: '-12 -26 124 202' };   // upper: cap height fills 0..150, Q's tail to 165
+const ASPECT = { lower: 124 / 228, upper: 124 / 202 };
+const LETTERS = { lower: {}, upper: {} };
+for (const kase of CASES) {
+  for (const [ch, def] of Object.entries(STROKES[kase].letters)) {
+    const f = FEATURES[kase][ch];
+    LETTERS[kase][ch] = {
+      ch, kase, glyph: kase === 'upper' ? ch.toUpperCase() : ch,
+      paths: def.strokes.map(s => polyToPath(parseDSL(s.d))),
+      cv: (def.confusions && def.confusions.visual) || [],
+      feature: f.say,
+      hl: f.hl.map(step => (Array.isArray(step) ? step : [step]).map(d => polyToPath(parseDSL(d))))
+    };
+  }
+}
+const ALL_LETTERS = Object.keys(LETTERS.lower);
+function LET(ch, kase) { return LETTERS[kase][ch]; }
+function glyphOf(ch, kase) { return kase === 'upper' ? ch.toUpperCase() : ch; }
+
+/* Reversal and rotation pairs (P-9, corpus See, Match family: "b for d, p for q"). Kept separate
+   from the stroke file's look-alike lists so the report can say which kind of mix-up it was. */
+const REVERSALS = {
+  lower: [['b', 'd'], ['p', 'q'], ['b', 'p'], ['d', 'q'], ['b', 'q'], ['d', 'p'], ['n', 'u'], ['m', 'w']],
+  upper: [['m', 'w'], ['n', 'z']]
+};
+function isReversal(a, b, kase) { return REVERSALS[kase].some(([x, y]) => (x === a && y === b) || (x === b && y === a)); }
+function confusionType(target, chosen, kase) {
+  if (isReversal(target, chosen, kase)) return 'reversal';
+  const L = LET(target, kase), C = LET(chosen, kase);
+  if (L.cv.includes(chosen) || C.cv.includes(target)) return 'visual';
+  return 'other';
+}
+
+/* Diagnostic distractors (F-9): look-alikes from the target's own list, preferring letters in the
+   run's unit set so confusable units are interleaved (P-9), then the wider pool's look-alikes, then
+   letters that list the target as a look-alike, then any letter. Same case only (corpus stimuli). */
+function chooseDistractors(target, units, count, kase) {
+  const L = LET(target, kase); const out = []; const used = new Set([target]);
+  const take = (pool) => { const src = pool.filter(x => !used.has(x) && LETTERS[kase][x]); if (!src.length) return null; const x = pick(src); used.add(x); return x; };
+  const inverse = ALL_LETTERS.filter(x => LET(x, kase).cv.includes(target));
+  const tiers = [L.cv.filter(x => units.includes(x)), L.cv, inverse, ALL_LETTERS];
+  for (const tier of tiers) { while (out.length < count) { const x = take(tier); if (!x) break; out.push({ letter: x, type: confusionType(target, x, kase) }); } }
+  return out;
+}
+
+/* =====================================================================
+   3. Cell rendering. One SVG per cell: the letter, a highlight layer for
+      the "why" step, and the marigold ring that points out the match.
+   ===================================================================== */
+const SVG_NS = 'http://www.w3.org/2000/svg';
+function el(tag, attrs = {}, parent) { const e = document.createElementNS(SVG_NS, tag); for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v); if (parent) parent.appendChild(e); return e; }
+function letterSVG(L, opts = {}) {
+  const svg = el('svg', { viewBox: VIEWBOX[L.kase], preserveAspectRatio: 'xMidYMid meet', 'aria-hidden': 'true' });
+  const g = el('g', { class: 'glyph' }, svg);
+  for (const d of L.paths) el('path', { d }, g);
+  if (opts.plain) return svg;
+  const hl = el('g', { class: 'hl' }, svg);
+  L.hl.forEach((step, i) => step.forEach(d => el('path', { d, 'data-step': i }, hl)));
+  return svg;
+}
+
+/* =====================================================================
+   4. Narration (NA-1..NA-13). Every line is one complete utterance with a
+      stable key. Assets are used when asset_base is set; otherwise the
+      device's speech synthesis is a flagged fallback (manifest build_flags).
+   ===================================================================== */
+const NARRATION = { version: NARR_T.version, voice_spec: NARR_T.voice_spec, content_rule: NARR_T.content_rule, asset_base: NARR_T.asset_base, utterances: {} };
+(function buildNarration() {
+  for (const u of NARR_T.utterances) {
+    if (u.per_letter) {
+      for (const kase of CASES) for (const ch of ALL_LETTERS) {
+        const key = `${u.key}.${kase}.${ch}`;                 // case in the key: asset file names must not differ by case alone
+        const text = u.text.replace('{feature}', LET(ch, kase).feature);
+        NARRATION.utterances[key] = { text, tts: text, asset: NARR_T.asset_pattern.replace('{key}', key), letter: glyphOf(ch, kase), contexts: u.contexts };
+      }
+    } else {
+      NARRATION.utterances[u.key] = { text: u.text, tts: u.tts || u.text, asset: NARR_T.asset_pattern.replace('{key}', u.key), contexts: u.contexts };
+    }
+  }
+})();
+function featureKey(ch, kase) { return `feature.${kase}.${ch}`; }
+
+const Narrator = {
+  delivery: 'text-only', voice: null, voices: [], rate: 0.88, assets: new Map(),
+  seq: 0, speaking: false, currentResolve: null, currentAudio: null, listeners: new Set(),
+  async init() {
+    if (NARRATION.asset_base) { try { await this.preloadAssets(); this.delivery = 'asset'; } catch (e) { console.warn('narration assets unavailable', e); } }
+    if (this.delivery !== 'asset') this.delivery = window.speechSynthesis ? 'browser-tts' : 'text-only';
+    if (this.delivery === 'browser-tts') await this.loadVoices();
+  },
+  async preloadAssets() {                       // PL-7: everything before the activity starts
+    const base = NARRATION.asset_base.replace(/\/?$/, '/');
+    const jobs = Object.entries(NARRATION.utterances).map(async ([key, u]) => {
+      const res = await fetch(base + u.asset); if (!res.ok) throw new Error(key);
+      const blob = await res.blob(); const a = new Audio(URL.createObjectURL(blob)); a.preload = 'auto'; this.assets.set(key, a);
+    });
+    await Promise.all(jobs);
+  },
+  async loadVoices() {
+    const get = () => speechSynthesis.getVoices();
+    let v = get();
+    if (!v.length) { await new Promise(res => { const t = setTimeout(res, 1500); speechSynthesis.addEventListener('voiceschanged', () => { clearTimeout(t); res(); }, { once: true }); }); v = get(); }
+    const en = v.filter(x => /^en/i.test(x.lang));
+    this.voices = en.length ? en : v;
+    const wanted = state.cfg && state.cfg.voice;
+    this.voice = (wanted && this.voices.find(x => x.name === wanted)) || this.pickVoice(this.voices);
+  },
+  pickVoice(voices) {
+    const pref = [/natural/i, /neural/i, /premium/i, /enhanced/i, /google us english/i, /samantha/i, /aria/i, /jenny/i, /ava\b/i, /allison/i, /zira/i];
+    for (const re of pref) { const v = voices.find(x => re.test(x.name)); if (v) return v; }
+    return voices.find(x => /en-US/i.test(x.lang)) || voices[0] || null;
+  },
+  estimate(key) { const u = NARRATION.utterances[key]; return u ? 500 + u.tts.length * 62 / this.rate : 0; },
+  cancel() {
+    this.seq++;
+    if (this.delivery === 'browser-tts') { try { speechSynthesis.cancel(); } catch (e) {} }
+    if (this.currentAudio) { try { this.currentAudio.pause(); } catch (e) {} this.currentAudio = null; }
+    const r = this.currentResolve; this.currentResolve = null; this.setSpeaking(false); if (r) r('cancelled');
+  },
+  speak(key) {
+    return new Promise(resolve => {
+      const u = NARRATION.utterances[key];
+      if (!u) { console.warn('missing narration key', key); return resolve('missing'); }
+      this.cancel();
+      const mySeq = ++this.seq; this.currentResolve = resolve;
+      const done = (how) => { if (mySeq !== this.seq) return; this.currentResolve = null; this.setSpeaking(false); resolve(how); };
+      if (this.delivery === 'asset' && this.assets.has(key)) {
+        const a = this.assets.get(key); this.currentAudio = a; a.currentTime = 0;
+        a.onended = () => done('ended'); a.onerror = () => done('error');
+        this.setSpeaking(true); a.play().catch(() => done('error')); return;
+      }
+      if (this.delivery === 'browser-tts') {
+        const utt = new SpeechSynthesisUtterance(u.tts);
+        if (this.voice) { utt.voice = this.voice; utt.lang = this.voice.lang; } else utt.lang = 'en-US';
+        utt.rate = this.rate; utt.pitch = 1;
+        utt.onend = () => done('ended');
+        utt.onerror = (e) => done((e.error === 'interrupted' || e.error === 'canceled') ? 'cancelled' : 'error');
+        this.setSpeaking(true);
+        setTimeout(() => { if (mySeq !== this.seq) return; try { speechSynthesis.resume(); speechSynthesis.speak(utt); } catch (e) { done('error'); } }, 40);   // resume(): WebKit can stay paused after cancel()
+        const est = 800 + u.tts.length * 80 / this.rate;   // watchdog: some engines never fire onend
+        setTimeout(() => { if (mySeq === this.seq && this.currentResolve) done('timeout'); }, est + 3000);
+        return;
+      }
+      this.setSpeaking(true); setTimeout(() => done('text'), 400 + u.tts.length * 45);   // text-only pacing
+    });
+  },
+  setSpeaking(v) { this.speaking = v; for (const f of this.listeners) f(v); }
+};
+
+/* =====================================================================
+   5. Sound effects (not narration; mutable per NA-4). No buzzer exists.
+   ===================================================================== */
+const SFX = {
+  ctx: null, enabled: true,
+  init() { if (this.ctx) return; try { this.ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {} },
+  resume() { if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume().catch(() => {}); },
+  tone(freq, dur, o = {}) {
+    if (!this.ctx || !this.enabled) return;
+    const t = this.ctx.currentTime + (o.at || 0); const osc = this.ctx.createOscillator(); const g = this.ctx.createGain();
+    osc.type = o.type || 'sine'; osc.frequency.value = freq;
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(o.gain || 0.07, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    osc.connect(g).connect(this.ctx.destination); osc.start(t); osc.stop(t + dur + 0.05);
+  },
+  chime()  { this.tone(523.25, 0.35); this.tone(659.25, 0.5, { at: 0.12 }); },
+  settle() { this.tone(523.25, 0.3); this.tone(659.25, 0.3, { at: 0.14 }); this.tone(783.99, 0.55, { at: 0.28 }); }
+};
+
+/* =====================================================================
+   6. Activity engine (AC, FI, F, M, R rules). One phase, one case, 3-7
+      units per run; each unit presented `reps` times. Scored per Standard
+      E-SELECT: the first touch on an item is the score. Item records go
+      upward; nothing about mastery is decided here (AC-4).
+   ===================================================================== */
+const LATENCY_ACCEPT_MS = 2000 * 1.5;      // PEDAGOGY M-6 letter row × Vision AC-11
+const TIMEOUT_MS = LATENCY_ACCEPT_MS * 2;   // PEDAGOGY R-9
+const FAST_MS = 1000;                       // F-11: a wrong touch faster than a fluent correct one (M-6 fluent <= 1 s)
+const SLOW_LOOK_MS = 1500;                  // slowed pace: the letter alone before the choices appear
+const CEILING_MS = MANIFEST_BASE.max_duration_sec * 1000;   // AC-3 hard ceiling
+const PALM_PX = 80;
+const DEFAULTS = { phase: 'guided', case: 'lower', units: ['b', 'd', 'p', 'm', 's'], distractors: 2, reps: 2, hand: 'right', sfx: 1, seed: null, voice: null };
+const CFG_KEY = 'sml-config', RUN_KEY = 'sml-run';
+
+const state = { cfg: null, run: null, item: null, card: null, cells: [], accept: 'none', timers: {}, flowToken: null, lastInput: 0, pointers: new Map(), reduced: false };
+
+function readConfig() {
+  const c = { ...DEFAULTS }; const saved = safeStore('local', CFG_KEY); if (saved) Object.assign(c, saved);
+  const p = new URLSearchParams(location.search);
+  if (/^(model|guided|independent)$/.test(p.get('phase') || '')) c.phase = p.get('phase');
+  if (/^(lower|upper)$/.test(p.get('case') || '')) c.case = p.get('case');
+  if (p.has('units')) { const u = [...new Set(p.get('units').toLowerCase().split(/[,\s]+/).filter(x => LETTERS.lower[x]))]; if (u.length >= 3 && u.length <= 7) c.units = u; }
+  if (p.has('distractors')) c.distractors = clamp(parseInt(p.get('distractors'), 10) || 2, 1, 2);
+  if (p.has('reps')) c.reps = clamp(parseInt(p.get('reps'), 10) || 2, 1, 3);
+  if (p.has('hand')) c.hand = p.get('hand') === 'left' ? 'left' : 'right';
+  if (p.has('sfx')) c.sfx = p.get('sfx') === '0' ? 0 : 1;
+  if (p.has('seed')) c.seed = parseInt(p.get('seed'), 10) || null;
+  if (!Array.isArray(c.units) || c.units.length < 3 || c.units.length > 7 || c.units.some(x => !LETTERS.lower[x])) c.units = DEFAULTS.units.slice();
+  if (!CASES.includes(c.case)) c.case = 'lower';
+  c.distractors = clamp(c.distractors | 0 || 2, 1, 2); c.reps = clamp(c.reps | 0 || 2, 1, 3);
+  return c;
+}
+function groupOf(kase) { return kase === 'upper' ? 'g2' : 'g1'; }
+function manifestId(kase, phase) { return MANIFEST_BASE.id_pattern.replace('{group}', groupOf(kase)).replace('{phase}', phase); }
+function estDuration(cfg) { return Math.round(cfg.units.length * cfg.reps * (cfg.phase === 'model' ? 12 : 7.5) + 10); }
+function buildManifest(cfg) {
+  return { ...MANIFEST_BASE, id: manifestId(cfg.case, cfg.phase), phase: cfg.phase, unit_group: MANIFEST_BASE.unit_groups_supported[groupOf(cfg.case)],
+    units: cfg.units.map(u => glyphOf(u, cfg.case)), unit_pool: ALL_LETTERS.map(u => glyphOf(u, cfg.case)), unit_count: cfg.units.length,
+    presentations_per_unit: cfg.reps, distractors_per_item: cfg.phase === 'independent' ? 2 : cfg.distractors, distractors_max: cfg.phase === 'independent' ? 3 : cfg.distractors, est_duration_sec: estDuration(cfg) };
+}
+
+/* Item order: `reps` shuffled rounds; the same letter never comes up twice in a row (AC-6, P-14). */
+function buildQueue(units, reps, mode) {
+  const out = [];
+  for (let r = 0; r < reps; r++) {
+    let round = shuffle(units);
+    for (let tries = 0; tries < 10 && out.length && round[0] === out[out.length - 1].unit; tries++) round = shuffle(units);
+    if (out.length && round[0] === out[out.length - 1].unit) round.push(round.shift());
+    round.forEach(u => out.push({ unit: u, mode, requeued: false, inserted: false }));
+  }
+  return out;
+}
+function newRun(cfg) {
+  rng = cfg.seed != null ? mulberry32(cfg.seed) : Math.random;
+  const mode = cfg.phase === 'model' ? 'model' : 'normal';
+  return {
+    id: manifestId(cfg.case, cfg.phase), run_id: 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), cfg,
+    queue: buildQueue(cfg.units, cfg.reps, mode), total: cfg.units.length * cfg.reps,
+    records: [], trial: 0, known: [], consec: 0, streak: 0, correctRun: 0,
+    dcount: cfg.phase === 'independent' ? 2 : cfg.distractors, slowed: false, slowedEvents: [],
+    posCounts: {}, startedAt: Date.now(), learnerMs: 0, requeueCount: {}, completed: false, completion: null, resumed: 0
+  };
+}
+
+/* Target position (P-14, §14 audit item 4): the least-used slot for this many choices, ties at random. */
+function choosePosition(run, n) {
+  const c = run.posCounts[n] || (run.posCounts[n] = Array(n).fill(0));
+  const min = Math.min(...c); const slot = pick(c.map((v, i) => v === min ? i : -1).filter(i => i >= 0));
+  c[slot]++; return slot;
+}
+
+/* ---- timers & flows ---- */
+function clearTimeouts() { clearTimeout(state.timers.t1); clearTimeout(state.timers.t2); }
+function beginFlow() { const t = {}; state.flowToken = t; return t; }
+function flowAlive(token, item) { return state.flowToken === token && state.item === item; }
+function armTimeouts(item) {                // R-9: neutral re-prompt, then no-response. Never an error.
+  clearTimeouts();
+  state.timers.t1 = setTimeout(async () => {
+    if (state.item !== item || state.accept === 'none') return;
+    item.reprompts++; const tok = beginFlow();
+    await Narrator.speak('prompt');
+    if (!flowAlive(tok, item)) return;
+    state.timers.t2 = setTimeout(() => { if (state.item === item && state.accept !== 'none') concludeNoResponse(item); }, TIMEOUT_MS);
+  }, TIMEOUT_MS + 800);
+}
+
+/* ---- layout: the card and the choices are the same size, so a match is a match in size too ---- */
+function fitCells() {
+  const work = $('#work'); if (!work || !state.item) return;
+  const kase = state.run.cfg.case; const n = state.cells.length || 3;
+  const cs = getComputedStyle(work); const W = work.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+  const H = work.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+  const gap = clamp(W * 0.035, 14, 36), rowGap = clamp(H * 0.08, 18, 56);
+  let ch = (H - rowGap) / 2; let cw = Math.max(ch * ASPECT[kase] * 1.12, 64);
+  if (n * cw + (n - 1) * gap > W) { cw = (W - (n - 1) * gap) / n; ch = Math.min(ch, cw / (ASPECT[kase] * 1.12)); }
+  work.style.setProperty('--cw', Math.floor(cw) + 'px'); work.style.setProperty('--ch', Math.floor(ch) + 'px'); work.style.setProperty('--gap', Math.floor(gap) + 'px');
+}
+function makeCell(letter, kase, cls) {
+  const div = document.createElement('div'); div.className = 'cell ' + cls;
+  const svg = letterSVG(LET(letter, kase)); div.appendChild(svg);
+  if (cls === 'is-option') { const b = document.createElement('div'); b.className = 'badge'; b.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>'; div.appendChild(b); }
+  return { el: div, svg, letter };
+}
+function renderItem(item, spec) {
+  const kase = state.run.cfg.case;
+  const tr = $('#target-row'); tr.innerHTML = '';
+  state.card = makeCell(item.unit, kase, 'is-card'); state.card.el.setAttribute('aria-label', 'The letter to match'); tr.appendChild(state.card.el);
+  state.card.el.addEventListener('pointerdown', e => onCardTouch(e));
+  const host = $('#options'); host.innerHTML = ''; state.cells = [];
+  spec.forEach((c, i) => {
+    const cell = makeCell(c.letter, kase, 'is-option'); Object.assign(cell, { isTarget: c.isTarget, type: c.type || null, pos: i });
+    cell.el.setAttribute('role', 'button'); cell.el.setAttribute('aria-label', 'Choice ' + (i + 1)); cell.el.tabIndex = 0;
+    cell.el.addEventListener('pointerdown', e => onPointerDown(e, cell));
+    cell.el.addEventListener('pointerup', e => onPointerUp(e, cell));
+    cell.el.addEventListener('pointercancel', e => state.pointers.delete(e.pointerId));
+    cell.el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); select(cell, 'keyboard'); } });
+    host.appendChild(cell.el); state.cells.push(cell);
+  });
+  fitCells();
+}
+function matchCell() { return state.cells.find(c => c.isTarget); }
+function showRing(cell, on, pulse) { cell.el.classList.toggle('is-shown', on); if (on && pulse) { cell.el.classList.add('is-pulsing'); setTimeout(() => cell.el.classList.remove('is-pulsing'), 2400); } }
+function clearHighlights() { $$('.hl path.is-on').forEach(p => p.classList.remove('is-on')); }
+function setPrompt(text) { $('#prompt').textContent = text || ''; }
+function setFeedback(text) { $('#feedback').textContent = text || ''; }
+function updateProgress() {
+  const run = state.run; const host = $('#progress'); host.innerHTML = '';
+  const done = run.records.filter(r => !r.presentation.requeued && !r.presentation.inserted_known).length;
+  for (let i = 0; i < run.total; i++) { const d = document.createElement('i'); if (i < done) d.classList.add('is-filled'); else if (i === done && state.item && !state.item.requeued && !state.item.inserted_known) d.classList.add('is-current'); host.appendChild(d); }
+}
+
+/* Light up the letter's distinguishing parts, in the order the feature line names them, on the card
+   and on its match together (corpus: "shows the match and says why"), while the line plays. */
+async function sayWhy(item, tok) {
+  const kase = state.run.cfg.case; const L = LET(item.unit, kase); const key = featureKey(item.unit, kase);
+  const svgs = [state.card.svg, matchCell().svg]; const steps = L.hl.length; const span = Narrator.estimate(key) * 0.8;
+  setFeedback(L.feature); item.why_shown = true;
+  const lights = [];
+  for (let i = 0; i < steps; i++) lights.push(setTimeout(() => { if (!flowAlive(tok, item)) return; svgs.forEach(s => $$(`.hl path[data-step="${i}"]`, s).forEach(p => p.classList.add('is-on'))); }, i * span / steps));
+  await Narrator.speak(key);
+  lights.forEach(clearTimeout);
+  if (flowAlive(tok, item)) svgs.forEach(s => $$('.hl path', s).forEach(p => p.classList.add('is-on')));
+  return flowAlive(tok, item);
+}
+
+/* A copy of the card's letter glides down onto its match and sits exactly on it. */
+async function glideToMatch(item, tok) {
+  const m = matchCell(); const from = state.card.svg.getBoundingClientRect(), to = m.svg.getBoundingClientRect();
+  if (state.reduced || !from.width || !to.width) { showRing(m, true, true); return flowAlive(tok, item); }
+  const ghost = letterSVG(LET(item.unit, state.run.cfg.case), { plain: true }); ghost.classList.add('ghost');
+  Object.assign(ghost.style, { left: from.left + 'px', top: from.top + 'px', width: from.width + 'px', height: from.height + 'px' });
+  document.body.appendChild(ghost); state.ghost = ghost;
+  ghost.getBoundingClientRect();
+  ghost.style.transform = `translate(${to.left - from.left}px, ${to.top - from.top}px) scale(${to.width / from.width}, ${to.height / from.height})`;
+  await sleep(950);
+  showRing(m, true, true);
+  await sleep(250);
+  ghost.style.opacity = '0'; setTimeout(() => ghost.remove(), 450); if (state.ghost === ghost) state.ghost = null;
+  return flowAlive(tok, item);
+}
+function dropGhost() { if (state.ghost) { state.ghost.remove(); state.ghost = null; } }
+
+/* ---- input. Pointer Events cover finger, stylus and mouse. A touch counts when it lifts on the same
+   choice it landed on; a second contact at the same time cancels both (a palm or two fingers), and
+   very large contacts are treated as palm. Mis-taps here would be scored as wrong answers (M-10). ---- */
+function onPointerDown(e, cell) {
+  const item = state.item; if (!item) return;
+  state.lastInput = now();
+  if (e.pointerType === 'touch' && e.width > PALM_PX && e.height > PALM_PX) { item.capture.palm_rejected++; return; }
+  if (state.pointers.size) { item.capture.multi_touch++; state.pointers.clear(); return; }
+  state.pointers.set(e.pointerId, { cell, t: now(), type: e.pointerType });
+  try { cell.el.releasePointerCapture(e.pointerId); } catch (err) {}
+}
+function onPointerUp(e, cell) {
+  const p = state.pointers.get(e.pointerId); state.pointers.delete(e.pointerId);
+  if (!p || p.cell !== cell) return;
+  select(cell, p.type, p.t);
+}
+function onCardTouch(e) {
+  const item = state.item; if (!item || state.accept === 'none') return;
+  item.card_taps++;
+  if (item.card_taps === 1 && !Narrator.speaking) { setFeedback(NARRATION.utterances.downhere.text); state.cells.forEach(c => { c.el.classList.add('is-nudge'); setTimeout(() => c.el.classList.remove('is-nudge'), 1100); }); Narrator.speak('downhere'); }
+}
+
+function select(cell, pointerType, tDown) {
+  const item = state.item; if (!item) return;
+  if (state.accept === 'none' || (state.accept === 'match' && !cell.isTarget)) { item.ignored_taps++; return; }
+  const t = tDown || now();
+  Narrator.cancel(); state.flowToken = null; clearTimeouts(); dropGhost();      // NA-5 barge-in
+  item.capture.pointer_types.add(pointerType);
+  if (!item.firstTouchAt) { item.firstTouchAt = t; item.latency_ms = Math.round(t - item.shownAt); item.latency_from_prompt_end_ms = item.promptEnd ? Math.round(t - item.promptEnd) : null; }
+  const confusion = cell.isTarget ? null : confusionType(item.unit, cell.letter, state.run.cfg.case);
+  item.touches.push({ letter: glyphOf(cell.letter, state.run.cfg.case), position: cell.pos, correct: !!cell.isTarget, confusion, after_demo: item.demos > 0, ms: Math.round(t - item.shownAt) });
+  if (cell.isTarget) return onCorrect(item, cell);
+  return onWrong(item, cell, confusion, t);
+}
+
+async function onCorrect(item, cell) {
+  state.accept = 'none'; clearTimeouts(); clearHighlights();
+  cell.el.classList.add('is-done'); showRing(cell, false); SFX.chime();
+  if (!item.first) item.first = { outcome: 'correct' };
+  await sleep(900);
+  if (state.item !== item) return;
+  finishItem(item, { outcome: 'correct' });
+}
+
+/* Wrong first touch: show the match and say why, then the child touches it (corpus: failure triggers a
+   demonstration and another attempt; F-1, F-12, TN-4). A wrong touch after the demonstration ends the
+   item; it comes back later (corpus: reattempt failure triggers the next stimulus). */
+async function onWrong(item, cell, confusion, t) {
+  const tok = beginFlow(); state.accept = 'none'; clearTimeouts();
+  const kase = state.run.cfg.case;
+  item.attempts++;
+  const fast = item.latency_ms != null && (t - item.shownAt) < FAST_MS && item.demos === 0;
+  item.errors.push({ letter: glyphOf(cell.letter, kase), confusion, fast });
+  if (!item.first) item.first = { outcome: 'incorrect', letter: glyphOf(cell.letter, kase), confusion, fast };
+  if (item.demos > 0) {                                   // reattempt failure (M-14 floor: never a dead stop)
+    setFeedback(NARRATION.utterances.later.text);
+    await Narrator.speak('later');
+    if (!flowAlive(tok, item)) return;
+    return finishItem(item, { outcome: 'incorrect' });
+  }
+  cell.el.classList.add('is-set-aside');
+  await demonstrate(item, 'error', tok);
+}
+
+/* One demonstration, three entry points: the model phase ('model'), a wrong first touch ('error'),
+   and the consecutive-error intervention on a requeued item ('together', M-13). While it runs, only
+   the match can be touched (barge-in on the right answer; other touches are ignored and counted). */
+async function demonstrate(item, why, tok) {
+  tok = tok || beginFlow();
+  item.demos++; item.revealed = true; item.inDemo = true; state.accept = 'match';
+  const slowed = state.run.slowed && why === 'error';      // F-11: guessing is slowed down, not retaught
+  const opener = why === 'model' ? 'watch' : why === 'together' ? 'together' : 'look';
+  setFeedback(NARRATION.utterances[opener].text);
+  await Narrator.speak(opener); if (!flowAlive(tok, item)) return;
+  if (why === 'error' && !slowed) { if (!await sayWhy(item, tok)) return; }
+  if (!await glideToMatch(item, tok)) return;
+  setFeedback(NARRATION.utterances.same.text);
+  await Narrator.speak('same'); if (!flowAlive(tok, item)) return;
+  if (why !== 'error') { if (!await sayWhy(item, tok)) return; }
+  item.why_skipped = slowed;
+  state.cells.forEach(c => c.el.classList.remove('is-set-aside'));
+  setFeedback(NARRATION.utterances.yourturn.text);
+  state.accept = 'any'; item.inDemo = false;
+  await Narrator.speak('yourturn'); if (!flowAlive(tok, item)) return;
+  item.promptEnd = now(); armTimeouts(item);
+}
+
+function concludeNoResponse(item) {           // R-9: not an error
+  if (state.item !== item) return;
+  if (!item.first) item.first = { outcome: 'no-response' };
+  finishItem(item, { outcome: 'no-response' });
+}
+
+/* ---- item bookkeeping: requeue (F-12), consecutive-error intervention (M-13), distractor steps in
+   the independent phase (P-10, P-11), guessing pace (F-11) ---- */
+function finishItem(item, final) {
+  const run = state.run; if (!run || state.item !== item) return;
+  state.item = null; state.accept = 'none'; clearTimeouts(); state.flowToken = null; dropGhost();
+  item.final = final; item.endedAt = now();
+  const first = item.first || { outcome: 'no-response' };
+  const scored = !item.revealed_before_first;                  // E-SELECT evidence only when the first touch came unhelped
+  if (first.outcome === 'correct') {
+    run.consec = 0; if (!run.known.includes(item.unit)) run.known.push(item.unit);
+    if (scored) run.correctRun++;
+    if (run.cfg.phase === 'independent' && scored) {
+      const quick = item.latency_ms != null && item.latency_ms <= LATENCY_ACCEPT_MS;
+      run.streak = quick ? run.streak + 1 : 0;
+      if (run.streak >= 3 && run.dcount < 3) { run.dcount++; run.streak = 0; }
+    }
+  } else {
+    run.streak = 0; run.correctRun = 0;
+    const isError = first.outcome === 'incorrect';
+    if (isError && scored) run.consec++;
+    const n = run.requeueCount[item.unit] || 0;
+    if (n < 1) {                                                // the item returns later, once (corpus; F-12)
+      run.requeueCount[item.unit] = n + 1;
+      const together = isError && run.consec >= 2;
+      const at = Math.min(run.queue.length, 2 + Math.floor(rng() * 2));   // a couple of items later, not straight away
+      run.queue.splice(at, 0, { unit: item.unit, mode: (together || run.cfg.phase === 'model') ? (run.cfg.phase === 'model' ? 'model' : 'together') : 'normal', requeued: true, inserted: false });
+      if (together) {                                           // insert a known item, then the modelled retry
+        const k = run.known.filter(u => u !== item.unit);
+        if (k.length) run.queue.splice(at, 0, { unit: pick(k), mode: 'normal', requeued: false, inserted: true });
+        run.consec = 0;
+      }
+    }
+    if (isError && run.cfg.phase === 'independent' && run.dcount > 2) run.dcount--;
+  }
+  const rec = buildRecord(item, run); run.records.push(rec);
+  updatePace(run);
+  persistRun(); emit('activity:item', rec);
+  setTimeout(nextItem, 350);
+}
+function updatePace(run) {
+  const last = run.records.slice(-4);
+  const fastWrong = last.filter(r => r.outcome === 'incorrect' && r.fast_error).length;
+  if (!run.slowed && fastWrong >= 2) { run.slowed = true; run.correctRun = 0; run.slowedEvents.push({ trial: run.trial, on: true }); }
+  else if (run.slowed && run.correctRun >= 3) { run.slowed = false; run.slowedEvents.push({ trial: run.trial, on: false }); }
+}
+function buildRecord(item, run) {
+  const first = item.first || { outcome: 'no-response' }; const kase = run.cfg.case;
+  const cap = item.capture; const conf = Math.max(0.4, 1 - 0.3 * (cap.multi_touch + cap.palm_rejected));
+  return {
+    schema: 'v1', activity_id: run.id, activity_version: MANIFEST_BASE.version, corpus_entry_id: MANIFEST_BASE.corpus_entry_id, run_id: run.run_id, trial: item.trial,
+    unit: glyphOf(item.unit, kase), unit_type: 'letter', unit_group: groupOf(kase), phase: run.cfg.phase,
+    presentation: { mode: item.mode, requeued: item.requeued, inserted_known: item.inserted_known, choices: item.positions.map(x => glyphOf(x, kase)), target_position: item.target_position,
+      distractors: item.distractors.map(d => ({ letter: glyphOf(d.letter, kase), type: d.type })), distractor_count: item.distractors.length, pace: item.pace },
+    response_mode: 'tap', scoring: 'E-SELECT first response',
+    outcome: first.outcome, counts_as_evidence: !item.revealed_before_first && first.outcome !== 'no-response',
+    selected_letter: first.letter || null, confusion: first.confusion || null, fast_error: !!first.fast,
+    final_outcome: item.final.outcome, repaired: item.final.outcome === 'correct' && first.outcome !== 'correct',
+    latency_ms: item.latency_ms == null ? null : item.latency_ms, latency_from_prompt_end_ms: item.latency_from_prompt_end_ms == null ? null : item.latency_from_prompt_end_ms,
+    attempts: item.attempts, demonstrations: item.demos, why_line: item.why_shown ? (item.why_skipped ? 'skipped (slowed pace)' : 'shown') : 'not shown',
+    reprompts: item.reprompts, replays: item.replays, card_taps: item.card_taps, ignored_taps: item.ignored_taps,
+    target_revealed_before_response: item.revealed_before_first, touches: item.touches,
+    capture: { pointer_types: [...cap.pointer_types], multi_touch: cap.multi_touch, palm_rejected: cap.palm_rejected, confidence: Math.round(conf * 100) / 100 },
+    narration_delivery: Narrator.delivery, time_on_item_ms: Math.round(item.endedAt - item.startedAt), ts: new Date().toISOString()
+  };
+}
+
+/* ---- the item loop ---- */
+async function nextItem() {
+  const run = state.run; if (!run || run.completed) return;
+  if (run.queue.length && run.learnerMs >= CEILING_MS) return finishRun('ceiling');
+  if (!run.queue.length) return finishRun('complete');
+  const q = run.queue.shift(); const target = q.unit; const kase = run.cfg.case;
+  const count = q.mode === 'normal' ? run.dcount : Math.min(run.dcount, 2);
+  const distractors = chooseDistractors(target, run.cfg.units, count, kase);
+  const n = distractors.length + 1; const slot = choosePosition(run, n);
+  const others = shuffle(distractors.map(d => ({ letter: d.letter, isTarget: false, type: d.type })));
+  const spec = others.slice(0, slot).concat([{ letter: target, isTarget: true }], others.slice(slot));
+  const item = {
+    trial: ++run.trial, unit: target, mode: q.mode, requeued: q.requeued, inserted_known: q.inserted, pace: run.slowed ? 'slowed' : 'normal',
+    positions: spec.map(c => c.letter), target_position: slot, distractors,
+    errors: [], touches: [], attempts: 0, demos: 0, reprompts: 0, replays: 0, card_taps: 0, ignored_taps: 0,
+    first: null, final: null, revealed: false, revealed_before_first: false, why_shown: false, why_skipped: false,
+    startedAt: now(), shownAt: null, promptEnd: null, firstTouchAt: null, latency_ms: null, latency_from_prompt_end_ms: null,
+    capture: { multi_touch: 0, palm_rejected: 0, pointer_types: new Set() }
+  };
+  state.item = item; state.pointers.clear();
+  renderItem(item, spec); updateProgress(); setFeedback(''); clearHighlights();
+  const tok = beginFlow();
+  if (run.slowed) {                                                  // F-11: slow the pace; the letter alone first
+    $('#options').classList.add('is-withheld'); state.card.el.classList.add('is-looking'); state.accept = 'none';
+    setPrompt(NARRATION.utterances.lookfirst.text);
+    await Promise.all([Narrator.speak('lookfirst'), sleep(SLOW_LOOK_MS)]);
+    if (!flowAlive(tok, item)) return;
+    state.card.el.classList.remove('is-looking'); $('#options').classList.remove('is-withheld');
+    await sleep(350); if (!flowAlive(tok, item)) return;
+  } else $('#options').classList.remove('is-withheld');
+  item.shownAt = now(); setPrompt(NARRATION.utterances.prompt.text);
+  if (item.mode !== 'normal') {                                      // model phase / M-13 together: demonstrate first
+    item.revealed_before_first = true; state.accept = 'match';
+    await sleep(300); if (!flowAlive(tok, item)) return;
+    return demonstrate(item, item.mode, tok);
+  }
+  state.accept = 'any';                                              // barge-in from the first instant (NA-5)
+  const r = await Narrator.speak('prompt');
+  if (!flowAlive(tok, item)) return;
+  if (r !== 'cancelled') item.promptEnd = now();
+  armTimeouts(item);
+}
+
+/* ---- run start / finish / persistence / emission ---- */
+function persistRun() { const run = state.run; if (!run) return; safeStore('session', RUN_KEY, { savedAt: Date.now(), run }); }
+function loadSavedRun() {
+  const s = safeStore('session', RUN_KEY); if (!s || !s.run || s.run.completed) return null;
+  if (Date.now() - s.savedAt > 30 * 60 * 1000) { safeStore('session', RUN_KEY, null); return null; }   // AC-5
+  return s.run;
+}
+const PARENT_ORIGIN = (() => { const p = new URLSearchParams(location.search).get('parent_origin'); if (p) return p; try { return document.referrer ? new URL(document.referrer).origin : null; } catch (e) { return null; } })();
+function emit(type, detail) {
+  try { window.dispatchEvent(new CustomEvent(type, { detail })); } catch (e) {}
+  try { if (window.parent && window.parent !== window && PARENT_ORIGIN) window.parent.postMessage({ type, payload: detail }, PARENT_ORIGIN); } catch (e) {}
+}
+function median(a) { if (!a.length) return null; const s = a.slice().sort((x, y) => x - y); const m = Math.floor(s.length / 2); return s.length % 2 ? s[m] : Math.round((s[m - 1] + s[m]) / 2); }
+/* Report by skill and error pattern, not by score (M-18, RP-9). The pattern line follows F-11. */
+function errorPattern(records) {
+  const errs = records.filter(r => r.outcome === 'incorrect' && r.counts_as_evidence);
+  if (!errs.length) return 'none';
+  if (errs.length === 1) return 'single error (no pattern yet)';
+  const pairs = {}; errs.forEach(r => { const k = r.unit + '>' + r.selected_letter; pairs[k] = (pairs[k] || 0) + 1; });
+  const repeated = Object.entries(pairs).filter(([, v]) => v >= 2).map(([k]) => k.replace('>', ' chosen for '));
+  const fast = errs.filter(r => r.fast_error).length;
+  if (repeated.length) return 'repeated identical confusion (reteach the contrast): ' + repeated.map(s => { const [a, b] = s.split(' chosen for '); return `${b} chosen for ${a}`; }).join('; ');
+  if (fast >= 2 && fast >= errs.length / 2) return 'fast and scattered (likely guessing or impulsive; slow the pace, do not reteach)';
+  return 'scattered (check attention or the device before reteaching)';
+}
+function buildResultPayload(run) {
+  const kase = run.cfg.case; const ev = run.records.filter(r => r.counts_as_evidence);
+  return {
+    schema: 'v1', activity_id: run.id, activity_version: MANIFEST_BASE.version, run_id: run.run_id, corpus_entry: MANIFEST_BASE.corpus_entry, corpus_entry_id: MANIFEST_BASE.corpus_entry_id,
+    phase: run.cfg.phase, unit_group: groupOf(kase), units: run.cfg.units.map(u => glyphOf(u, kase)), presentations_per_unit: run.cfg.reps, hand: run.cfg.hand,
+    scoring: 'E-SELECT: dichotomous, first response only. Mastery (>=90% over >=10 items across two sessions, P-2) is the session layer\'s decision.',
+    completion: run.completion, started_at: new Date(run.startedAt).toISOString(), ended_at: new Date().toISOString(),
+    learner_time_ms: Math.round(run.learnerMs), resumed_times: run.resumed, narration_delivery: Narrator.delivery,
+    first_response_evidence: { items: ev.length, correct: ev.filter(r => r.outcome === 'correct').length },
+    pace_changes: run.slowedEvents, error_pattern: errorPattern(run.records),
+    items: run.records,
+    summary: run.cfg.units.map(u => { const g = glyphOf(u, kase); const rs = run.records.filter(r => r.unit === g); const es = rs.filter(r => r.counts_as_evidence);
+      return { unit: g, presentations: rs.length, scored: es.length, first_try_correct: es.filter(r => r.outcome === 'correct').length,
+        chose_instead: rs.filter(r => r.outcome === 'incorrect').map(r => ({ chose: r.selected_letter, confusion: r.confusion, fast: r.fast_error })),
+        no_response: rs.filter(r => r.outcome === 'no-response').length, median_latency_ms: median(es.filter(r => r.outcome === 'correct').map(r => r.latency_ms).filter(x => x != null)) }; })
+  };
+}
+async function finishRun(kind) {
+  const run = state.run; if (!run || run.completed) return;
+  run.completed = true; run.completion = kind; state.item = null; state.accept = 'none'; clearTimeouts(); releaseWakeLock();
+  safeStore('session', RUN_KEY, null);
+  const payload = buildResultPayload(run); state.lastResult = payload;
+  try { const key = 'activity-results:' + run.id; const arr = safeStore('local', key) || []; arr.push(payload); safeStore('local', key, arr.slice(-20)); } catch (e) {}
+  emit('activity:result', payload);
+  showComplete(run, kind);
+}
+setInterval(() => {                                     // learner time (AC-3): excludes idle stretches and replay narration
+  const run = state.run; if (!run || run.completed || !state.item) return;
+  const active = (now() - state.lastInput) < 5000 || (Narrator.speaking && !state.replaying) || state.ghost;
+  if (active) run.learnerMs += 250;
+}, 250);
+
+/* =====================================================================
+   7. Screens, tutor drawer, boot
+   ===================================================================== */
+function showScreen(id) { $$('.screen').forEach(s => s.classList.toggle('is-active', s.id === id)); }
+function applyHand(cfg) { document.body.dataset.hand = cfg.hand; }
+function renderPreview(cfg) { const p = $('#preview'); p.innerHTML = ''; cfg.units.forEach(u => p.appendChild(letterSVG(LET(u, cfg.case), { plain: true }))); }
+function buildLink(cfg) {
+  const p = new URLSearchParams({ phase: cfg.phase, case: cfg.case, units: cfg.units.join(','), distractors: String(cfg.distractors), reps: String(cfg.reps), hand: cfg.hand, sfx: String(cfg.sfx) });
+  return location.origin + location.pathname + '?' + p.toString();
+}
+function saveConfig(cfg) { safeStore('local', CFG_KEY, { phase: cfg.phase, case: cfg.case, units: cfg.units, distractors: cfg.distractors, reps: cfg.reps, hand: cfg.hand, sfx: cfg.sfx, voice: cfg.voice || null }); }
+
+function unlockSpeech() {          // iOS and Android: the first speak() must happen inside the tap itself
+  try { if (window.speechSynthesis) { speechSynthesis.resume(); speechSynthesis.speak(new SpeechSynthesisUtterance('')); } } catch (e) {}
+}
+let wakeLock = null;
+async function requestWakeLock() { try { if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); } catch (e) {} }
+function releaseWakeLock() { try { if (wakeLock) { wakeLock.release(); wakeLock = null; } } catch (e) {} }
+
+async function startPressed() {
+  const btn = $('#start-btn'); if (btn.disabled) return; btn.disabled = true;
+  SFX.init(); SFX.resume(); SFX.enabled = !!state.cfg.sfx;   // everything that needs the tap runs before the first await
+  unlockSpeech(); requestWakeLock();
+  await Narrator.init(); populateVoices();
+  showScreen('screen-activity');
+  if (state.pendingResume) {
+    state.run = state.pendingResume; state.pendingResume = null; state.run.resumed++;
+    rng = state.run.cfg.seed != null ? mulberry32(state.run.cfg.seed + state.run.trial) : Math.random;
+    await Narrator.speak('resume');
+  } else {
+    state.run = newRun(state.cfg);
+    setPrompt(NARRATION.utterances[state.cfg.phase === 'model' ? 'intro.model' : 'intro.guided'].text);
+    await Narrator.speak(state.cfg.phase === 'model' ? 'intro.model' : 'intro.guided');
+  }
+  btn.disabled = false;
+  nextItem();
+}
+
+function showComplete(run, kind) {
+  showScreen('screen-complete');
+  const n = run.cfg.units.length; const key = kind === 'complete' ? `complete.${n}` : 'complete.partial';
+  $('#complete-text').textContent = NARRATION.utterances[key].text;
+  const row = $('#ink-row'); row.innerHTML = ''; row.classList.remove('no-anim');
+  run.cfg.units.forEach((u, i) => {                     // the letters the child matched (GM-3: <= 3 s, skippable)
+    const d = document.createElement('div'); d.className = 'mini'; d.style.animationDelay = (i * 0.3) + 's';
+    d.appendChild(letterSVG(LET(u, run.cfg.case), { plain: true })); row.appendChild(d);
+  });
+  $('#screen-complete').addEventListener('pointerdown', () => row.classList.add('no-anim'), { once: true });
+  SFX.settle(); Narrator.speak(key);
+  $('#results-out').value = JSON.stringify(state.lastResult, null, 2);
+}
+
+/* ---- tutor drawer ---- */
+const PHASE_HINTS = {
+  model: 'Every letter is matched for the child first: a copy of the letter glides onto its match and the narration says what to look at. Then the child touches it. These items never count as first-try evidence.',
+  guided: 'The child finds the match among one or two look-alikes. A wrong touch is shown and explained, then the child touches the match.',
+  independent: 'Two look-alikes to start; after three quick correct touches a third look-alike is added, and after a mistake it goes back to two.'
+};
+const T = { phase: 'guided', case: 'lower', units: [], distractors: 2, reps: 2, hand: 'right', sfx: 1 };
+function seg(sel, v) { $$(sel + ' button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === v))); }
+function syncDraft() { Object.assign(T, { phase: state.cfg.phase, case: state.cfg.case, units: state.cfg.units.slice(), distractors: state.cfg.distractors, reps: state.cfg.reps, hand: state.cfg.hand, sfx: state.cfg.sfx }); renderDraft(); }
+function renderDraft() {
+  seg('#phase-seg', T.phase); seg('#case-seg', T.case); seg('#distractor-seg', String(T.distractors)); seg('#reps-seg', String(T.reps)); seg('#hand-seg', T.hand); seg('#sfx-seg', String(T.sfx));
+  $('#phase-hint').textContent = PHASE_HINTS[T.phase];
+  const indep = T.phase === 'independent';
+  $$('#distractor-seg button').forEach(b => { b.disabled = indep; });
+  $('#distractor-hint').textContent = indep ? 'Independent sets this itself: two, rising to three.' : 'Look-alikes for each letter, from the same case.';
+  $$('#letter-grid button').forEach(b => { b.textContent = glyphOf(b.dataset.v, T.case); b.setAttribute('aria-pressed', String(T.units.includes(b.dataset.v))); });
+  const n = T.units.length; const ok = n >= 3 && n <= 7;
+  $('#letter-count').textContent = ok ? `${n} letters chosen.` : `${n} chosen. Choose between 3 and 7.`;
+  $('#apply-btn').disabled = !ok;
+  const draftCfg = { ...state.cfg, ...T };
+  $('#duration-hint').textContent = ok ? `${n * T.reps} items, about ${Math.round(estDuration(draftCfg) / 10) * 10} seconds.` : '';
+  $('#share-link').value = buildLink(draftCfg);
+  $('#manifest-out').value = JSON.stringify(buildManifest(draftCfg), null, 2);
+}
+function openTutor(scrollToResults) { syncDraft(); const t = $('#tutor'); t.classList.add('is-open'); if (scrollToResults) setTimeout(() => $('#results-out').scrollIntoView({ block: 'start' }), 260); }
+function closeTutor() { $('#tutor').classList.remove('is-open'); }
+function populateVoices() {
+  const sel = $('#voice-select'); sel.innerHTML = '';
+  if (Narrator.delivery === 'asset') { $('#voice-hint').textContent = 'Recorded narration assets are in use.'; sel.disabled = true; return; }
+  if (Narrator.delivery !== 'browser-tts' || !Narrator.voices.length) { $('#voice-hint').textContent = 'No speech voices are available on this device. On-screen text is shown instead and results are stamped text-only.'; sel.disabled = true; return; }
+  Narrator.voices.forEach((v, i) => { const o = document.createElement('option'); o.value = String(i); o.textContent = `${v.name} (${v.lang})`; if (Narrator.voice === v) o.selected = true; sel.appendChild(o); });
+  sel.disabled = false; $('#voice-hint').textContent = 'Device speech is a stand-in until recorded narration exists. Pick the most natural voice available.';
+}
+function copyText(text, btn) {
+  const done = () => { const old = btn.textContent; btn.textContent = 'Copied'; setTimeout(() => btn.textContent = old, 1400); };
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, () => fallback());
+  else fallback();
+  function fallback() { const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); done(); } catch (e) {} ta.remove(); }
+}
+
+/* ---- boot ---- */
+(function boot() {
+  try { state.reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) {}
+  state.cfg = readConfig(); applyHand(state.cfg); renderPreview(state.cfg);
+  const saved = loadSavedRun();
+  if (saved && saved.cfg && saved.cfg.phase === state.cfg.phase && saved.cfg.case === state.cfg.case && saved.cfg.units.join() === state.cfg.units.join()) { state.pendingResume = saved; $('#start-label').textContent = 'Keep going'; }
+
+  $('#start-btn').addEventListener('click', startPressed);
+  $('#gear').addEventListener('click', () => openTutor(false));
+  $('#tutor-close').addEventListener('click', closeTutor);
+  $('#results-btn').addEventListener('click', () => openTutor(true));
+  $('#again-btn').addEventListener('click', () => { SFX.resume(); unlockSpeech(); requestWakeLock(); state.run = newRun(state.cfg); showScreen('screen-activity'); nextItem(); });
+  $('#done-btn').addEventListener('click', () => { releaseWakeLock(); state.run = null; $('#start-label').textContent = 'Start'; renderPreview(state.cfg); showScreen('screen-start'); });
+  // Touch defaults that fight a tap task on a tablet: scroll and rubber-banding, pinch and double-tap zoom, long-press callouts.
+  const work = $('#work');
+  ['touchstart', 'touchmove', 'touchend'].forEach(t => work.addEventListener(t, e => { if (e.cancelable) e.preventDefault(); }, { passive: false }));
+  document.addEventListener('gesturestart', e => e.preventDefault());
+  $('#screen-activity').addEventListener('contextmenu', e => e.preventDefault());
+  window.addEventListener('resize', fitCells);
+  window.addEventListener('pointerup', e => state.pointers.delete(e.pointerId));      // a touch that slid off and lifted elsewhere
+  window.addEventListener('pointercancel', e => state.pointers.delete(e.pointerId));
+  $('#replay').addEventListener('click', async () => {   // NA-2: unlimited, never a hint, never scored; never reveals the match
+    const item = state.item; if (!item || state.accept === 'none' || item.inDemo) return;   // during a demonstration the narration is already running
+    state.replaying = true; item.replays++;
+    const r = await Narrator.speak('prompt'); state.replaying = false;
+    if (r !== 'cancelled' && state.item === item && state.accept !== 'none') { if (!item.firstTouchAt) item.promptEnd = now(); armTimeouts(item); }
+  });
+  Narrator.listeners.add(v => $('#replay').classList.toggle('is-speaking', v));
+  window.addEventListener('keydown', e => { if ((e.key === 'r' || e.key === 'R') && $('#screen-activity').classList.contains('is-active')) $('#replay').click(); });
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) { Narrator.cancel(); clearTimeouts(); }
+    else { if (state.run && !state.run.completed) requestWakeLock(); if (state.item && state.accept !== 'none') armTimeouts(state.item); }
+  });
+
+  // drawer controls
+  const grid = $('#letter-grid');
+  ALL_LETTERS.forEach(ch => { const b = document.createElement('button'); b.type = 'button'; b.dataset.v = ch; b.textContent = ch; b.setAttribute('aria-pressed', 'false'); grid.appendChild(b); });
+  grid.addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; const ch = b.dataset.v; const i = T.units.indexOf(ch); if (i >= 0) T.units.splice(i, 1); else if (T.units.length < 7) T.units.push(ch); renderDraft(); });
+  const bindSeg = (sel, key, parse) => $(sel).addEventListener('click', e => { const b = e.target.closest('button'); if (!b || b.disabled) return; T[key] = parse ? parse(b.dataset.v) : b.dataset.v; renderDraft(); });
+  bindSeg('#phase-seg', 'phase'); bindSeg('#case-seg', 'case'); bindSeg('#distractor-seg', 'distractors', v => parseInt(v, 10)); bindSeg('#reps-seg', 'reps', v => parseInt(v, 10));
+  bindSeg('#hand-seg', 'hand'); bindSeg('#sfx-seg', 'sfx', v => parseInt(v, 10));
+  $('#apply-btn').addEventListener('click', () => {
+    state.cfg = { ...state.cfg, phase: T.phase, case: T.case, units: T.units.slice(), distractors: T.distractors, reps: T.reps, hand: T.hand, sfx: T.sfx };
+    saveConfig(state.cfg); safeStore('session', RUN_KEY, null); state.pendingResume = null; state.run = null;
+    SFX.enabled = !!state.cfg.sfx; applyHand(state.cfg); renderPreview(state.cfg);
+    try { history.replaceState(null, '', buildLink(state.cfg)); } catch (e) {}
+    $('#start-label').textContent = 'Start'; closeTutor(); showScreen('screen-start');
+  });
+  $('#copy-link-btn').addEventListener('click', e => copyText($('#share-link').value, e.currentTarget));
+  $('#copy-results-btn').addEventListener('click', e => copyText($('#results-out').value || '', e.currentTarget));
+  $('#voice-select').addEventListener('change', e => { const v = Narrator.voices[parseInt(e.target.value, 10)]; if (v) { Narrator.voice = v; state.cfg.voice = v.name; saveConfig(state.cfg); Narrator.speak('prompt'); } });
+  $('#voice-hint').textContent = 'Voices load when Start is pressed.';
+  $('#narration-out').value = JSON.stringify(NARRATION, null, 2);
+  syncDraft();
+  window.SeeMatch = { NARRATION, LETTERS, FEATURES, buildManifest: () => buildManifest(state.cfg), state, chooseDistractors, confusionType, select };
+})();
+</script>
+</body>
+</html>
