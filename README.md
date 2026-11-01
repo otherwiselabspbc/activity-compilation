@@ -7,11 +7,16 @@ Digital versions of evidence-based reading activities for children aged 6–8 wi
 | See Letter, Trace Letter, Say Letter Name | [With speech](see-trace-name-letters/) · [Without speech](see-trace-name-letters/?speech=off) |
 | See Letter, Trace Letter | [Open](see-trace-letters/) |
 | See Letter, Touch Matching Letter | [Open](see-match-letters/) |
+| Hear Letter Name, See Letter, Tap Letter | [Open](hear-see-tap-letters/) · [Choose letters and phase](hear-see-tap-letters/launcher.html) |
 
 **How it works.** In See Letter, Trace Letter the child sees one letter with numbered start dots and arrows and traces it; no letter names are spoken. In See Letter, Trace Letter, Say Letter Name the child sees one letter with numbered start dots and arrows, traces it with a finger, stylus, or mouse, and then says the letter's name. When the name can't be heard, the child taps it among three spoken choices instead.
 
 In See Letter, Touch Matching Letter the child sees a letter on a card and touches the same letter among look-alikes (b with d and p); after a wrong touch the page shows what tells the letters apart and the child touches the match. No letter names are spoken.
 
-**Microphone.** The page asks for the microphone once, at the start of a run, and switches it off when the run ends. The page itself records nothing. Letter names are recognised by the browser's own speech service (Google's in Chrome), so audio goes to that service. The "Without speech" link never uses the microphone.
+In Hear Letter Name, See Letter, Tap Letter the child hears a letter name ("Tap the letter b.") and taps that letter among look-alike or sound-alike letters (b with d, or b with e). After a wrong tap the page names the letter that was tapped, says what tells the two apart, points to the right card, and the child taps it; the letter comes back later in the run. One letter at a time is the model phase, two letters the guided phase, three or four the independent phase. All of its narration is recorded in advance, so it needs no microphone and no speech service.
 
-**For grown-ups.** The gear on the start screen chooses the letters (lower- or upper-case), the phase (model, guided, independent), and the hand, and makes a link for exactly that set. Works best in Chrome or Edge.
+**Microphone.** The page asks for the microphone once, at the start of a run, and switches it off when the run ends. The page itself records nothing. Letter names are recognised by the browser's own speech service (Google's in Chrome), so audio goes to that service. The "Without speech" link never uses the microphone, and neither does Hear Letter Name, See Letter, Tap Letter.
+
+**For grown-ups.** The gear on the start screen chooses the letters (lower- or upper-case), the phase (model, guided, independent), and the hand, and makes a link for exactly that set. Works best in Chrome or Edge. For Hear Letter Name, See Letter, Tap Letter, the launcher page does the same job: it chooses the letters, the phase and the hand, makes the link, and shows each item's result as the child works.
+
+**Building.** `BUILDING.md` describes the shared component library (`shared/`), the narration pipeline that records the spoken lines offline, the build check and the browser test (`tools/`), and how to add the next activity.
