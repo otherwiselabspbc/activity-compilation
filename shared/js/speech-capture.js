@@ -153,12 +153,16 @@ export class Listener {
     catch (e) { return { ok: false, reason: e?.name || "error" }; }
   }
 
+  /** Stop for good: later open() calls do nothing (a trial cut short cannot reopen the microphone). */
+  dispose() { this.disposed = true; this.close(); this.release(); }
+
   release() { if (this.stream) { this.stream.getTracks().forEach((t) => t.stop()); this.stream = null; } }
 
   async open() {
+    if (this.disposed) return;
     this.wanted = true;
     await this.ended;
-    if (this.wanted && !this.active) this._start();
+    if (this.wanted && !this.active && !this.disposed) this._start();
   }
 
   close() {

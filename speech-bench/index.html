@@ -216,6 +216,8 @@ $("#go").addEventListener("click", async () => {
   const listener = new Listener({ continuous: s.continuous, holdStream: s.holdStream, phrases: s.phrases ? phraseList() : null });
   const prep = await listener.prepare();          // inside the tap: one microphone request for the held stream
   state.listener = listener; state.skip = false;
+  const run = { skipped: false }; let skipNow; const skipped = new Promise((r) => (skipNow = r));
+  state.onSkip = () => { run.skipped = true; skipNow(); };
   show("run");
   if (!prep.ok) { log(`Microphone not available (${prep.reason}).`); }
   const order = state.rng.shuffle(state.letters);
@@ -223,18 +225,18 @@ $("#go").addEventListener("click", async () => {
     await waitWhilePaused();
     if (state.skip) break;
     $("#progress").textContent = `Setup ${s.id} · letter ${i + 1} of ${order.length}`;
-    await runTrial(s, listener, order[i]);
+    await Promise.race([runTrial(s, listener, order[i], run), skipped]);   // End this setup works mid-letter
     store.set(state.results);
     await sleep(700);
   }
-  await listener.close(); listener.release();
+  listener.dispose(); if ("speechSynthesis" in window) speechSynthesis.cancel();
   $("#letter").textContent = "";
   nextSetup();
 });
 
 function phraseList() { return Object.values(lex.names).flatMap((toks) => toks.slice(0, 2)); }
 
-async function runTrial(s, listener, letter) {
+async function runTrial(s, listener, letter, run = {}) {
   $("#letter").textContent = letter; $("#live").textContent = ""; setMic(false); status("");
   const trial = { setup: s.id, letter, attempts: [], t: new Date().toISOString() };
   const t0 = performance.now(); trial.events = [];
@@ -245,7 +247,7 @@ async function runTrial(s, listener, letter) {
     if (ev.type === "interim" || ev.type === "final") log(`${ev.type === "final" ? "final  " : "interim"}  ${ev.alts.map((a) => `"${a.transcript.trim()}"${typeof a.confidence === "number" && a.confidence > 0 ? " " + a.confidence.toFixed(2) : ""}`).join(" | ")}`);
     if (ev.type === "error") { log(`error    ${ev.error}`); if (ev.error !== "no-speech" && ev.error !== "aborted") status(`Chrome reported a problem: ${ev.error}`); }
   };
-  const say = (key) => async () => { status(LINES[key]); setMic(s.flow === "legacy"); await speak(LINES[key]); status("Listening…"); };
+  const say = (key) => async () => { if (run.skipped) return; status(LINES[key]); setMic(s.flow === "legacy"); await speak(LINES[key]); status("Listening…"); };
 
   if (s.flow === "legacy") {
     listener.onEvent = logEv; await listener.open();
@@ -276,6 +278,7 @@ async function runTrial(s, listener, letter) {
   const ok = trial.attempts.find((a) => a.onset_ms != null);
   trial.onset_ms = ok ? ok.onset_ms : null;
   trial.audio_source = listener.audioSource; if (s.phrases) trial.phrases_applied = listener.phrasesApplied;
+  if (run.skipped) return;               // cut short by End this setup: not counted
   state.results.trials.push(trial);
   setMic(false);
   status({ correct: "Heard it.", tap: "Would go to tapping.", incorrect: "Marked wrong.", "no-response": "Nothing heard." }[trial.outcome] || "");
@@ -290,7 +293,7 @@ function legacyOutcome(a, second) {
 function slim(a) { return { end: a.end, onset_ms: a.onset_ms, captures: a.captures, discarded: a.discarded || [], score: a.score, legacy: a.legacy || null }; }
 
 $("#pause").addEventListener("click", () => { state.paused = !state.paused; $("#pause").textContent = state.paused ? "Resume" : "Pause"; });
-$("#skip").addEventListener("click", () => { state.skip = true; state.paused = false; $("#pause").textContent = "Pause"; });
+$("#skip").addEventListener("click", () => { state.skip = true; state.onSkip && state.onSkip(); state.paused = false; $("#pause").textContent = "Pause"; });
 $("#misspoke").addEventListener("click", () => {
   const t = state.results.trials[state.results.trials.length - 1];
   if (t) { t.excluded = true; log(`(left out: ${t.letter})`); store.set(state.results); }
