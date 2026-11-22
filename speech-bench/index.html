@@ -26,7 +26,7 @@
   #status { min-height: 1.6em; font-size: 1.1rem; }
   .mic { display: inline-block; width: 14px; height: 14px; border-radius: 50%; background: var(--ol-ink-faint); vertical-align: middle; margin-right: 8px; }
   .mic.on { background: var(--ol-sage); box-shadow: 0 0 0 6px var(--ol-sage-soft); }
-  #live { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: .85rem; background: var(--ol-ground-2); border-radius: 12px; padding: 10px 12px; height: 9.5em; overflow-y: auto; text-align: left; white-space: pre-wrap; margin-top: 12px; }
+  #live, .live { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: .85rem; background: var(--ol-ground-2); border-radius: 12px; padding: 10px 12px; height: 9.5em; overflow-y: auto; text-align: left; white-space: pre-wrap; margin-top: 12px; }
   table { border-collapse: collapse; width: 100%; font-size: .95rem; }
   th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--ol-ground-2); vertical-align: top; }
   th { color: var(--ol-ink-soft); font-weight: 700; }
@@ -63,7 +63,12 @@
 
     <div class="row">
       <button class="primary" id="start">Start</button>
+      <button id="check">Microphone check</button>
       <button id="show-last" hidden>Show last results</button>
+    </div>
+    <div class="card" id="check-card" hidden>
+      <p id="check-status"><strong>Say a few letters now.</strong> Listening for 10 seconds with the browser's plain settings…</p>
+      <div id="check-log" class="live"></div>
     </div>
   </section>
 
@@ -177,6 +182,23 @@ $("#start").addEventListener("click", () => {
     queue: ids.map((id) => SETUPS.find((s) => s.id === id)), letters, rng: makeRng(seed), paused: false, skip: false };
   nextSetup();
 });
+$("#check").addEventListener("click", () => {
+  // Plain recognizer, no narration, no held stream: does Chrome's speech service return anything at all?
+  const card = $("#check-card"), out = $("#check-log"); card.hidden = false; out.textContent = ""; $("#check").disabled = true;
+  const line = (t) => { out.textContent += t + "\n"; out.scrollTop = out.scrollHeight; };
+  const seen = new Set(); let gotText = false;
+  const l = new Listener({ continuous: true, onEvent: (ev) => {
+    if (ev.type === "interim" || ev.type === "final") { gotText = true; line(`${ev.type === "final" ? "final  " : "interim"}  ${ev.alts.map((a) => '"' + a.transcript.trim() + '"').join(" | ")}`); }
+    else if (ev.type === "error") line(`error    ${ev.error}`);
+    else if (!seen.has(ev.type)) { seen.add(ev.type); line(`event    ${ev.type}`); }
+  } });
+  l.open();
+  setTimeout(async () => {
+    await l.close();
+    $("#check-status").innerHTML = gotText ? "<strong>Chrome returned text.</strong> The recognizer works here." : "<strong>Chrome returned no text.</strong> Please send a screenshot of the lines below.";
+    $("#check").disabled = false;
+  }, 10000);
+});
 $("#show-last").addEventListener("click", () => { const r = store.get(); if (r) showResults(r); });
 
 // ---------- run
@@ -215,11 +237,13 @@ function phraseList() { return Object.values(lex.names).flatMap((toks) => toks.s
 async function runTrial(s, listener, letter) {
   $("#letter").textContent = letter; $("#live").textContent = ""; setMic(false); status("");
   const trial = { setup: s.id, letter, attempts: [], t: new Date().toISOString() };
+  const t0 = performance.now(); trial.events = [];
   const logEv = (ev) => {
+    if (trial.events.length < 80) trial.events.push(ev.error ? { type: ev.type, t_ms: Math.round(ev.t - t0), error: ev.error } : { type: ev.type, t_ms: Math.round(ev.t - t0) });
     if (ev.type === "audiostart") setMic(true);
     if (ev.type === "end") setMic(s.flow === "legacy" && listener.wanted);
     if (ev.type === "interim" || ev.type === "final") log(`${ev.type === "final" ? "final  " : "interim"}  ${ev.alts.map((a) => `"${a.transcript.trim()}"${typeof a.confidence === "number" && a.confidence > 0 ? " " + a.confidence.toFixed(2) : ""}`).join(" | ")}`);
-    if (ev.type === "error") log(`error    ${ev.error}`);
+    if (ev.type === "error") { log(`error    ${ev.error}`); if (ev.error !== "no-speech" && ev.error !== "aborted") status(`Chrome reported a problem: ${ev.error}`); }
   };
   const say = (key) => async () => { status(LINES[key]); setMic(s.flow === "legacy"); await speak(LINES[key]); status("Listening…"); };
 
