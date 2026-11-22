@@ -1,0 +1,299 @@
+{
+  "schema": "letter-name-variants/v1",
+  "note": "Accepted renderings of each spoken letter name (Vision SR-4, SR-5; Pedagogy R-5, R-7). Seeded from ORT-22's lexicon plus 'am' (m) and 'yes' (s). Grow it from speech-bench logs, never from guesses alone. Answers are letter names only: sound tokens are listed so they can be recognised and logged, never accepted. 'a' and the other weak tokens count only when they are the whole answer.",
+  "names": {
+    "a": [
+      "ay",
+      "ey",
+      "hey",
+      "eigh"
+    ],
+    "b": [
+      "b",
+      "bee",
+      "be",
+      "bea",
+      "bees"
+    ],
+    "c": [
+      "c",
+      "see",
+      "sea",
+      "cee",
+      "si"
+    ],
+    "d": [
+      "d",
+      "dee",
+      "de",
+      "dea"
+    ],
+    "e": [
+      "e",
+      "ee",
+      "eee",
+      "he",
+      "ea"
+    ],
+    "f": [
+      "f",
+      "ef",
+      "eff"
+    ],
+    "g": [
+      "g",
+      "gee",
+      "jee",
+      "ji",
+      "ge"
+    ],
+    "h": [
+      "h",
+      "aitch",
+      "aich",
+      "age",
+      "ache",
+      "hatch",
+      "each",
+      "haitch",
+      "eight",
+      "8"
+    ],
+    "i": [
+      "i",
+      "eye",
+      "aye",
+      "ai",
+      "hi"
+    ],
+    "j": [
+      "j",
+      "jay",
+      "jae",
+      "ja"
+    ],
+    "k": [
+      "k",
+      "kay",
+      "kae",
+      "ka",
+      "cay",
+      "okay",
+      "ok"
+    ],
+    "l": [
+      "l",
+      "el",
+      "ell",
+      "elle",
+      "al"
+    ],
+    "m": [
+      "m",
+      "em",
+      "emm",
+      "im",
+      "am"
+    ],
+    "n": [
+      "n",
+      "en",
+      "enn",
+      "in",
+      "an",
+      "ann",
+      "end"
+    ],
+    "o": [
+      "o",
+      "owe",
+      "ow"
+    ],
+    "p": [
+      "p",
+      "pee",
+      "pea",
+      "pe"
+    ],
+    "q": [
+      "q",
+      "cue",
+      "queue",
+      "kew",
+      "que",
+      "kyu"
+    ],
+    "r": [
+      "r",
+      "are",
+      "ar",
+      "our",
+      "arr",
+      "hour"
+    ],
+    "s": [
+      "s",
+      "es",
+      "ess",
+      "ass",
+      "yes"
+    ],
+    "t": [
+      "t",
+      "tee",
+      "tea",
+      "te",
+      "ti"
+    ],
+    "u": [
+      "u",
+      "you",
+      "yu",
+      "yoo",
+      "ewe"
+    ],
+    "v": [
+      "v",
+      "vee",
+      "ve",
+      "vi",
+      "we",
+      "wee"
+    ],
+    "w": [
+      "w",
+      "doubleu",
+      "doubleyou",
+      "doubleyoo",
+      "dubya"
+    ],
+    "x": [
+      "x",
+      "ex",
+      "ecks",
+      "eks",
+      "eggs"
+    ],
+    "y": [
+      "y",
+      "why",
+      "wye",
+      "wi",
+      "wai"
+    ],
+    "z": [
+      "z",
+      "zee",
+      "zed",
+      "zi",
+      "ze"
+    ]
+  },
+  "weak": {
+    "a": "a",
+    "oh": "o",
+    "eh": "a",
+    "the": "d",
+    "um": "m",
+    "hmm": "m",
+    "mm": "m",
+    "mmm": "m"
+  },
+  "sounds": {
+    "b": [
+      "buh",
+      "bah",
+      "ba",
+      "bu"
+    ],
+    "d": [
+      "duh",
+      "da",
+      "du"
+    ],
+    "p": [
+      "puh",
+      "pah",
+      "pa"
+    ],
+    "t": [
+      "tuh",
+      "ta"
+    ],
+    "k": [
+      "kuh",
+      "cuh"
+    ],
+    "g": [
+      "guh",
+      "ga"
+    ],
+    "n": [
+      "nnn"
+    ],
+    "s": [
+      "ss",
+      "sss",
+      "hiss"
+    ],
+    "f": [
+      "ff",
+      "fff"
+    ],
+    "v": [
+      "vvv"
+    ],
+    "z": [
+      "zzz"
+    ],
+    "l": [
+      "lll",
+      "luh"
+    ],
+    "r": [
+      "rrr",
+      "ruh"
+    ],
+    "h": [
+      "huh",
+      "hah"
+    ],
+    "j": [
+      "juh"
+    ],
+    "w": [
+      "wuh"
+    ],
+    "y": [
+      "yuh"
+    ]
+  },
+  "fillers": [
+    "its",
+    "thats",
+    "this",
+    "that",
+    "one",
+    "is",
+    "letter",
+    "uh",
+    "er",
+    "and",
+    "my",
+    "it"
+  ],
+  "phrases": {
+    "double u": "doubleu",
+    "double you": "doubleyou",
+    "double yoo": "doubleyoo"
+  },
+  "families": {
+    "ee": "bcdegptvz",
+    "ay": "ajkh",
+    "eh": "flmnsx",
+    "eye": "iy",
+    "yoo": "uqw",
+    "oh": "o",
+    "ar": "r"
+  }
+}

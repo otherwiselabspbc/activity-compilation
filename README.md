@@ -8,6 +8,7 @@ Digital versions of evidence-based reading activities for children aged 6–8 wi
 | See Letter, Trace Letter | [Open](see-trace-letters/) |
 | See Letter, Touch Matching Letter | [Open](see-match-letters/) |
 | Hear Letter Name, See Letter, Tap Letter | [Open](hear-see-tap-letters/) · [Choose letters and phase](hear-see-tap-letters/launcher.html) |
+| Speech test bench (for grown-ups testing speech recognition; not an activity) | [Open](speech-bench/) |
 
 **How it works.** In See Letter, Trace Letter the child sees one letter with numbered start dots and arrows and traces it; no letter names are spoken. In See Letter, Trace Letter, Say Letter Name the child sees one letter with numbered start dots and arrows, traces it with a finger, stylus, or mouse, and then says the letter's name. When the name can't be heard, the child taps it among three spoken choices instead.
 

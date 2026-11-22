@@ -24,8 +24,10 @@ shared/                        the shared component library (Vision VZ-8, RP-10)
   js/telemetry.js              item-level results, telemetry_schema v1, postMessage + CustomEvent + buffer
   js/host.js                   launch parameters, run key, resumable state
   js/rng.js                    seeded randomness (reproducible runs, varied order)
+  js/speech-capture.js         speech listener + letter-name scorer (Speech Capture Module Spec); speech-bench/ tests it
   fonts/                       Andika (SIL OFL): single-story a and g, designed for literacy learners
   data/letters-group1.json     Target Units Letter Group 1: names, key words, confusions, shape lines
+  data/letter-name-variants.json  accepted renderings of each spoken letter name (SR-4, SR-5)
 tools/                         build tooling (Node 22; run `npm install` here once)
   build-narration-manifest.mjs letters.json → narration/manifest.json (every utterance, stable keys)
   generate-narration.mjs       offline neural TTS (Kokoro-82M) → narration/audio/*.mp3 + review table

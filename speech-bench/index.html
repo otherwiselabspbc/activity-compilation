@@ -1,0 +1,335 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Speech Test Bench</title>
+<link rel="stylesheet" href="../shared/css/tokens.css">
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--ol-ground); color: var(--ol-ink); font-family: var(--ol-font); line-height: var(--ol-leading); }
+  main { max-width: 860px; margin: 0 auto; padding: 24px 16px 64px; }
+  h1 { font-size: 1.6rem; margin: 0 0 4px; }
+  h2 { font-size: 1.15rem; margin: 28px 0 8px; }
+  p, li { max-width: 68ch; }
+  .muted { color: var(--ol-ink-soft); }
+  .card { background: var(--ol-card); border: 1px solid var(--ol-card-edge); border-radius: var(--ol-radius-sm); padding: 16px; margin: 12px 0; box-shadow: var(--ol-shadow); }
+  label.setup { display: flex; gap: 12px; align-items: flex-start; padding: 8px 0; }
+  label.setup input { width: 22px; height: 22px; margin-top: 3px; flex: none; }
+  button { font: inherit; min-height: 48px; padding: 8px 18px; border-radius: 999px; border: 1px solid var(--ol-card-edge); background: var(--ol-card); color: var(--ol-ink); cursor: pointer; }
+  button.primary { background: var(--ol-sky); color: #fff; border-color: var(--ol-sky); min-height: 60px; padding: 10px 28px; font-size: 1.1rem; }
+  button:disabled { opacity: .5; cursor: default; }
+  .row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+  input[type=text] { font: inherit; padding: 8px 12px; border-radius: 12px; border: 1px solid var(--ol-card-edge); background: var(--ol-card); color: var(--ol-ink); width: 100%; max-width: 420px; }
+  #stage { text-align: center; }
+  #letter { font-size: clamp(120px, 34vw, 240px); line-height: 1; margin: 12px 0 4px; font-weight: 400; }
+  #status { min-height: 1.6em; font-size: 1.1rem; }
+  .mic { display: inline-block; width: 14px; height: 14px; border-radius: 50%; background: var(--ol-ink-faint); vertical-align: middle; margin-right: 8px; }
+  .mic.on { background: var(--ol-sage); box-shadow: 0 0 0 6px var(--ol-sage-soft); }
+  #live { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: .85rem; background: var(--ol-ground-2); border-radius: 12px; padding: 10px 12px; height: 9.5em; overflow-y: auto; text-align: left; white-space: pre-wrap; margin-top: 12px; }
+  table { border-collapse: collapse; width: 100%; font-size: .95rem; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--ol-ground-2); vertical-align: top; }
+  th { color: var(--ol-ink-soft); font-weight: 700; }
+  .scroll { overflow-x: auto; }
+  .pass { color: var(--ol-sage); font-weight: 700; }
+  .fail { color: var(--ol-clay); font-weight: 700; }
+  [hidden] { display: none !important; }
+  textarea { width: 100%; height: 8em; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: .8rem; border-radius: 12px; border: 1px solid var(--ol-card-edge); background: var(--ol-card); color: var(--ol-ink); }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Speech test bench</h1>
+    <p class="muted">For testing the shared speech module with a grown-up's own voice. Not an activity for children.</p>
+  </header>
+
+  <section id="screen-setup">
+    <div class="card">
+      <p><strong>How it works.</strong> A letter appears and the page says "Say this letter." Say the letter's name at a normal pace. If the page says "Say it again?", say it again. Say every letter correctly: the bench measures how often the recognizer hears a correct answer.</p>
+      <p>Use Chrome in a quiet room. Speak from where a child would sit. Each setup takes about 2 minutes for a–z.</p>
+      <p class="muted">The page records nothing. What the browser's speech service returns (text only) is shown on screen and kept in the results you copy. In Chrome, audio goes to Google's speech service.</p>
+      <p id="support" class="muted"></p>
+    </div>
+
+    <h2>Setups</h2>
+    <div class="card" id="setup-list"></div>
+
+    <h2>Letters</h2>
+    <div class="card">
+      <input type="text" id="letters" value="abcdefghijklmnopqrstuvwxyz" aria-label="Letters to test" autocomplete="off" spellcheck="false">
+      <p class="muted">Each setup shows these letters once, in a shuffled order.</p>
+    </div>
+
+    <div class="row">
+      <button class="primary" id="start">Start</button>
+      <button id="show-last" hidden>Show last results</button>
+    </div>
+  </section>
+
+  <section id="screen-between" hidden>
+    <div class="card">
+      <h2 id="between-title" style="margin-top:0"></h2>
+      <p id="between-text"></p>
+      <button class="primary" id="go">Start this setup</button>
+    </div>
+  </section>
+
+  <section id="screen-run" hidden>
+    <div id="stage">
+      <p class="muted" id="progress"></p>
+      <div id="letter" aria-live="polite"></div>
+      <div id="status"><span class="mic" id="mic"></span><span id="status-text"></span></div>
+      <div class="row" style="justify-content:center;margin-top:12px">
+        <button id="pause">Pause</button>
+        <button id="misspoke" title="Leave the last letter out of the results">I said the last one wrong</button>
+        <button id="skip">End this setup</button>
+      </div>
+      <div id="live" aria-label="What the recognizer returned"></div>
+    </div>
+  </section>
+
+  <section id="screen-results" hidden>
+    <h2 style="margin-top:0">Results</h2>
+    <p>Pass: at least 90% of letters correct within 2 tries, and none marked wrong.</p>
+    <div class="card scroll"><table id="summary"></table></div>
+    <p class="muted">"New rules would accept" applies the new scoring to the captures the setup kept, so setups A and B can be compared on scoring alone.</p>
+    <h2>Letters that were missed</h2>
+    <div class="card scroll"><table id="misses"></table></div>
+    <h2>Send the results</h2>
+    <p>Copy the results and paste them into the project thread, or download the file.</p>
+    <div class="row">
+      <button class="primary" id="copy">Copy results</button>
+      <button id="download">Download results</button>
+      <button id="restart">Back to setups</button>
+    </div>
+    <p id="copied" class="muted" aria-live="polite"></p>
+    <textarea id="json" readonly aria-label="Results as JSON"></textarea>
+  </section>
+</main>
+
+<script type="module">
+import { loadLetterNames, Listener, attemptHalfDuplex, attemptLegacy, decideItem, speechSupported, phrasesSupported, SR } from "../shared/js/speech-capture.js";
+import { makeRng, randomSeed } from "../shared/js/rng.js";
+
+const $ = (s) => document.querySelector(s);
+const STORE = "speech-bench-results";
+const WINDOW_MS = 6000;                     // 2 × 3 s acceptable letter latency (Pedagogy R-9, M-6; Vision AC-11)
+const LINES = { prompt: "Say this letter.", again: "I didn't quite catch that. Say it again?" };
+
+const SETUPS = [
+  { id: "A", label: "ORT-22 today", detail: "Listens while the page talks, holds its own microphone stream, scores final results only, ORT-22's rules.", flow: "legacy", continuous: true, holdStream: true },
+  { id: "B", label: "ORT-22 without the held stream", detail: "Same as A, but the recognizer uses its own microphone access.", flow: "legacy", continuous: true, holdStream: false },
+  { id: "C", label: "New defaults", detail: "Microphone off while the page talks, one short session per try, accepts interim results, new rules.", flow: "half", continuous: false, holdStream: false },
+  { id: "D", label: "New defaults with phrase hints", detail: "Same as C, and tells the recognizer to expect letter names (Chrome's phrase hints).", flow: "half", continuous: false, holdStream: false, phrases: true },
+];
+
+let lex, state = null;
+
+// ---------- storage (per-viewer convenience only)
+const store = { get() { try { return JSON.parse(localStorage.getItem(STORE) || "null"); } catch { return null; } },
+                set(v) { try { localStorage.setItem(STORE, JSON.stringify(v)); } catch {} } };
+
+// ---------- narration: device speech (the bench tests capture, not narration; ORT-22 also used device speech)
+let voice = null;
+function pickVoice() {
+  const vs = speechSynthesis.getVoices().filter((v) => /^en(-|_)US/i.test(v.lang));
+  voice = vs.find((v) => /Google US English/i.test(v.name)) || vs.find((v) => v.localService) || vs[0] || null;
+}
+if ("speechSynthesis" in window) { pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
+function speak(text) {
+  return new Promise((resolve) => {
+    if (!("speechSynthesis" in window)) return resolve();
+    const u = new SpeechSynthesisUtterance(text); u.rate = 0.9; if (voice) u.voice = voice;
+    let done = false; const fin = () => { if (!done) { done = true; clearTimeout(t); resolve(); } };
+    const t = setTimeout(fin, 1500 + text.length * 90);
+    u.onend = fin; u.onerror = fin;
+    speechSynthesis.cancel(); speechSynthesis.speak(u);
+  });
+}
+
+// ---------- setup screen
+function renderSetup() {
+  const hasPhrases = phrasesSupported();
+  $("#setup-list").innerHTML = "";
+  for (const s of SETUPS) {
+    const off = s.phrases && !hasPhrases;
+    const lab = document.createElement("label"); lab.className = "setup";
+    lab.innerHTML = `<input type="checkbox" value="${s.id}" ${off ? "disabled" : "checked"}><span><strong>${s.id}. ${s.label}</strong><br><span class="muted">${s.detail}${off ? " Not available in this browser, so it will be skipped." : ""}</span></span>`;
+    $("#setup-list").append(lab);
+  }
+  const ok = speechSupported();
+  $("#support").textContent = ok ? `Speech recognition is available (${vendor()}).` : "Speech recognition is not available here. Open this page in Chrome over https.";
+  $("#start").disabled = !ok || !lex;
+  $("#show-last").hidden = !store.get();
+}
+function vendor() { const ua = navigator.userAgent; return /Edg\//.test(ua) ? "Microsoft Edge" : /Chrome|Chromium/.test(ua) ? "Chrome" : /Safari/.test(ua) ? "Safari" : "unknown browser"; }
+
+function show(id) { for (const s of ["setup", "between", "run", "results"]) $("#screen-" + s).hidden = s !== id; window.scrollTo(0, 0); }
+
+$("#start").addEventListener("click", () => {
+  const ids = [...document.querySelectorAll("#setup-list input:checked")].map((i) => i.value);
+  const letters = [...new Set(($("#letters").value.toLowerCase().match(/[a-z]/g) || []))];
+  if (!ids.length || !letters.length) return;
+  const seed = randomSeed();
+  state = { results: { bench: "speech-bench/v1", started: new Date().toISOString(), browser: vendor(), user_agent: navigator.userAgent,
+    phrases_supported: phrasesSupported(), window_ms: WINDOW_MS, seed, letters: letters.join(""), setups: ids, trials: [] },
+    queue: ids.map((id) => SETUPS.find((s) => s.id === id)), letters, rng: makeRng(seed), paused: false, skip: false };
+  nextSetup();
+});
+$("#show-last").addEventListener("click", () => { const r = store.get(); if (r) showResults(r); });
+
+// ---------- run
+function nextSetup() {
+  const s = state.queue.shift();
+  if (!s) return finishRun();
+  state.setup = s;
+  $("#between-title").textContent = `Setup ${s.id}: ${s.label}`;
+  $("#between-text").textContent = s.detail + (s.holdStream ? " The browser may ask to use the microphone: choose Allow." : "");
+  show("between");
+}
+
+$("#go").addEventListener("click", async () => {
+  const s = state.setup;
+  const listener = new Listener({ continuous: s.continuous, holdStream: s.holdStream, phrases: s.phrases ? phraseList() : null });
+  const prep = await listener.prepare();          // inside the tap: one microphone request for the held stream
+  state.listener = listener; state.skip = false;
+  show("run");
+  if (!prep.ok) { log(`Microphone not available (${prep.reason}).`); }
+  const order = state.rng.shuffle(state.letters);
+  for (let i = 0; i < order.length && !state.skip; i++) {
+    await waitWhilePaused();
+    if (state.skip) break;
+    $("#progress").textContent = `Setup ${s.id} · letter ${i + 1} of ${order.length}`;
+    await runTrial(s, listener, order[i]);
+    store.set(state.results);
+    await sleep(700);
+  }
+  await listener.close(); listener.release();
+  $("#letter").textContent = "";
+  nextSetup();
+});
+
+function phraseList() { return Object.values(lex.names).flatMap((toks) => toks.slice(0, 2)); }
+
+async function runTrial(s, listener, letter) {
+  $("#letter").textContent = letter; $("#live").textContent = ""; setMic(false); status("");
+  const trial = { setup: s.id, letter, attempts: [], t: new Date().toISOString() };
+  const logEv = (ev) => {
+    if (ev.type === "audiostart") setMic(true);
+    if (ev.type === "end") setMic(s.flow === "legacy" && listener.wanted);
+    if (ev.type === "interim" || ev.type === "final") log(`${ev.type === "final" ? "final  " : "interim"}  ${ev.alts.map((a) => `"${a.transcript.trim()}"${typeof a.confidence === "number" && a.confidence > 0 ? " " + a.confidence.toFixed(2) : ""}`).join(" | ")}`);
+    if (ev.type === "error") log(`error    ${ev.error}`);
+  };
+  const say = (key) => async () => { status(LINES[key]); setMic(s.flow === "legacy"); await speak(LINES[key]); status("Listening…"); };
+
+  if (s.flow === "legacy") {
+    listener.onEvent = logEv; await listener.open();
+    status("Listening…"); await sleep(1500);   // ORT-22 opens the recognizer and holds the prompt back 1.5 s (NAME_DEFER_MS)
+    const a1 = await attemptLegacy({ listener, speak: say("prompt"), windowMs: WINDOW_MS, target: letter, lex, log: logEv });
+    trial.attempts.push(slim(a1));
+    let outcome = legacyOutcome(a1);
+    if (outcome === "retry") {
+      const a2 = await attemptLegacy({ listener, speak: say("again"), windowMs: WINDOW_MS, target: letter, lex, log: logEv });
+      trial.attempts.push(slim(a2));
+      outcome = legacyOutcome(a2, true);
+    }
+    await listener.close();
+    trial.outcome = outcome;
+  } else {
+    const a1 = await attemptHalfDuplex({ listener, speak: say("prompt"), windowMs: WINDOW_MS, target: letter, lex, log: logEv });
+    trial.attempts.push(slim(a1));
+    let d = decideItem([a1.score], letter);
+    if (d.outcome === "retry") {
+      const a2 = await attemptHalfDuplex({ listener, speak: say("again"), windowMs: WINDOW_MS, target: letter, lex, log: logEv });
+      trial.attempts.push(slim(a2));
+      d = decideItem([a1.score, a2.score], letter);
+    }
+    trial.outcome = d.outcome === "uncertain" ? "tap" : d.outcome;
+    if (d.heard) trial.heard = d.heard;
+  }
+  trial.new_rules_accept = trial.attempts.some((a) => a.score.score === "correct");
+  const ok = trial.attempts.find((a) => a.onset_ms != null);
+  trial.onset_ms = ok ? ok.onset_ms : null;
+  trial.audio_source = listener.audioSource; if (s.phrases) trial.phrases_applied = listener.phrasesApplied;
+  state.results.trials.push(trial);
+  setMic(false);
+  status({ correct: "Heard it.", tap: "Would go to tapping.", incorrect: "Marked wrong.", "no-response": "Nothing heard." }[trial.outcome] || "");
+}
+
+function legacyOutcome(a, second) {
+  if (a.legacy.score === "correct") return "correct";
+  if (a.legacy.score === "incorrect") return "incorrect";
+  if (!a.captures.length && !a.discarded.length && a.end === "window") return second ? "no-response" : "retry";
+  return second ? "tap" : "retry";
+}
+function slim(a) { return { end: a.end, onset_ms: a.onset_ms, captures: a.captures, discarded: a.discarded || [], score: a.score, legacy: a.legacy || null }; }
+
+$("#pause").addEventListener("click", () => { state.paused = !state.paused; $("#pause").textContent = state.paused ? "Resume" : "Pause"; });
+$("#skip").addEventListener("click", () => { state.skip = true; state.paused = false; $("#pause").textContent = "Pause"; });
+$("#misspoke").addEventListener("click", () => {
+  const t = state.results.trials[state.results.trials.length - 1];
+  if (t) { t.excluded = true; log(`(left out: ${t.letter})`); store.set(state.results); }
+});
+async function waitWhilePaused() { while (state.paused && !state.skip) await sleep(200); }
+
+// ---------- results
+function finishRun() { state.results.finished = new Date().toISOString(); store.set(state.results); showResults(state.results); }
+
+function showResults(r) {
+  const rows = [["Setup", "Letters", "Correct first try", "Correct within 2", "Sent to tapping", "Marked wrong", "Nothing heard", "Median time to speech", "New rules would accept", "Pass"]];
+  for (const id of r.setups) {
+    const ts = r.trials.filter((t) => t.setup === id && !t.excluded); if (!ts.length) continue;
+    const n = ts.length, c = (f) => ts.filter(f).length, pct = (k) => `${k} (${Math.round((100 * k) / n)}%)`;
+    const first = c((t) => t.outcome === "correct" && t.attempts.length === 1);
+    const within = c((t) => t.outcome === "correct"), wrong = c((t) => t.outcome === "incorrect");
+    const on = ts.map((t) => t.onset_ms).filter((x) => x != null).sort((a, b) => a - b);
+    const med = on.length ? (on[Math.floor(on.length / 2)] / 1000).toFixed(1) + " s" : "—";
+    const pass = within / n >= 0.9 && wrong === 0;
+    const label = SETUPS.find((s) => s.id === id)?.label || id;
+    rows.push([`${id}. ${label}`, n, pct(first), pct(within), pct(c((t) => t.outcome === "tap")), String(wrong), String(c((t) => t.outcome === "no-response")), med, pct(c((t) => t.new_rules_accept)), pass ? '<span class="pass">Pass</span>' : '<span class="fail">Not yet</span>']);
+  }
+  $("#summary").innerHTML = rows.map((r, i) => `<tr>${r.map((c) => (i ? `<td>${c}</td>` : `<th>${c}</th>`)).join("")}</tr>`).join("");
+  const miss = r.trials.filter((t) => !t.excluded && t.outcome !== "correct");
+  $("#misses").innerHTML = miss.length
+    ? `<tr><th>Setup</th><th>Letter</th><th>Result</th><th>What the recognizer returned</th></tr>` + miss.map((t) => `<tr><td>${t.setup}</td><td>${t.letter}</td><td>${t.outcome}</td><td>${esc(heardText(t))}</td></tr>`).join("")
+    : "<tr><td>None.</td></tr>";
+  $("#json").value = JSON.stringify(r, null, 1);
+  show("results");
+}
+function heardText(t) {
+  const parts = [];
+  for (const a of t.attempts) {
+    const txt = [...a.captures.filter((c) => c.final), ...(a.discarded || []).map((d) => ({ ...d, discarded: true }))]
+      .map((c) => (c.discarded ? "[thrown away] " : "") + (c.alts[0]?.transcript || "").trim()).filter(Boolean);
+    if (!txt.length && a.captures.length) txt.push("(interim only) " + (a.captures[a.captures.length - 1].alts[0]?.transcript || "").trim());
+    parts.push(txt.length ? txt.join(" / ") : "(nothing)");
+  }
+  return parts.join(" → ");
+}
+$("#copy").addEventListener("click", async () => {
+  const text = $("#json").value;
+  try { await navigator.clipboard.writeText(text); $("#copied").textContent = "Copied."; }
+  catch { $("#json").select(); document.execCommand && document.execCommand("copy"); $("#copied").textContent = "Selected: press Ctrl+C to copy."; }
+});
+$("#download").addEventListener("click", () => {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([$("#json").value], { type: "application/json" }));
+  a.download = `speech-bench-${new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-")}.json`; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+});
+$("#restart").addEventListener("click", () => { renderSetup(); show("setup"); });
+
+// ---------- helpers
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+function status(t) { $("#status-text").textContent = t; }
+function setMic(on) { $("#mic").classList.toggle("on", !!on); }
+function log(line) { const el = $("#live"); el.textContent += line + "\n"; el.scrollTop = el.scrollHeight; }
+function esc(s) { return String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
+
+loadLetterNames("../shared/data/letter-name-variants.json").then((l) => { lex = l; renderSetup(); }, (e) => { renderSetup(); $("#support").textContent = "Could not load the letter-name list: " + e.message; });
+renderSetup();
+window.SpeechBench = { get state() { return state; }, get lex() { return lex; } };
+</script>
+</body>
+</html>
