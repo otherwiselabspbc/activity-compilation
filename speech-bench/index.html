@@ -114,7 +114,7 @@
 </main>
 
 <script type="module">
-import { loadLetterNames, Listener, attemptHalfDuplex, attemptLegacy, decideItem, speechSupported, phrasesSupported, SR } from "../shared/js/speech-capture.js";
+import { loadLetterNames, Listener, attemptHalfDuplex, attemptLegacy, decideItem, speechSupported, onDeviceStatus, installOnDevice, SR } from "../shared/js/speech-capture.js";
 import { makeRng, randomSeed } from "../shared/js/rng.js";
 
 const $ = (s) => document.querySelector(s);
@@ -125,8 +125,8 @@ const LINES = { prompt: "Say this letter.", again: "I didn't quite catch that. S
 const SETUPS = [
   { id: "A", label: "ORT-22 today", detail: "Listens while the page talks, holds its own microphone stream, scores final results only, ORT-22's rules.", flow: "legacy", continuous: true, holdStream: true },
   { id: "B", label: "ORT-22 without the held stream", detail: "Same as A, but the recognizer uses its own microphone access.", flow: "legacy", continuous: true, holdStream: false },
-  { id: "C", label: "New defaults", detail: "Microphone off while the page talks, one short session per try, accepts interim results, new rules.", flow: "half", continuous: false, holdStream: false },
-  { id: "D", label: "New defaults with phrase hints", detail: "Same as C, and tells the recognizer to expect letter names (Chrome's phrase hints).", flow: "half", continuous: false, holdStream: false, phrases: true },
+  { id: "C", label: "New defaults", detail: "Microphone off while the page talks, then listens until the try ends, accepts interim results, new rules.", flow: "half", continuous: true, holdStream: false },
+  { id: "D", label: "New defaults, on-device with phrase hints", detail: "Same as C, but uses Chrome's on-device recognizer (audio stays on this computer) and tells it to expect letter names. Chrome may first download its speech model.", flow: "half", continuous: true, holdStream: false, phrases: true, processLocally: true },
 ];
 
 let lex, state = null;
@@ -155,12 +155,12 @@ function speak(text) {
 
 // ---------- setup screen
 function renderSetup() {
-  const hasPhrases = phrasesSupported();
+  const hasPhrases = !!SR && typeof SR.available === "function" && typeof window.SpeechRecognitionPhrase === "function";
   $("#setup-list").innerHTML = "";
   for (const s of SETUPS) {
     const off = s.phrases && !hasPhrases;
     const lab = document.createElement("label"); lab.className = "setup";
-    lab.innerHTML = `<input type="checkbox" value="${s.id}" ${off ? "disabled" : "checked"}><span><strong>${s.id}. ${s.label}</strong><br><span class="muted">${s.detail}${off ? " Not available in this browser, so it will be skipped." : ""}</span></span>`;
+    lab.innerHTML = `<input type="checkbox" value="${s.id}" ${off ? "disabled" : "checked"}><span><strong>${s.id}. ${s.label}</strong><br><span class="muted">${s.detail}${off ? " Not available in this browser." : ""}</span></span>`;
     $("#setup-list").append(lab);
   }
   const ok = speechSupported();
@@ -178,7 +178,7 @@ $("#start").addEventListener("click", () => {
   if (!ids.length || !letters.length) return;
   const seed = randomSeed();
   state = { results: { bench: "speech-bench/v1", started: new Date().toISOString(), browser: vendor(), user_agent: navigator.userAgent,
-    phrases_supported: phrasesSupported(), window_ms: WINDOW_MS, seed, letters: letters.join(""), setups: ids, trials: [] },
+    phrases_supported: !!SR && typeof SR.available === "function" && typeof window.SpeechRecognitionPhrase === "function", window_ms: WINDOW_MS, seed, letters: letters.join(""), setups: ids, trials: [] },
     queue: ids.map((id) => SETUPS.find((s) => s.id === id)), letters, rng: makeRng(seed), paused: false, skip: false };
   nextSetup();
 });
@@ -213,7 +213,14 @@ function nextSetup() {
 
 $("#go").addEventListener("click", async () => {
   const s = state.setup;
-  const listener = new Listener({ continuous: s.continuous, holdStream: s.holdStream, phrases: s.phrases ? phraseList() : null });
+  if (s.processLocally) {                         // on-device model: check, download if needed (inside the tap)
+    show("run"); $("#letter").textContent = ""; status("Checking Chrome's on-device speech model…");
+    let st = await onDeviceStatus();
+    if (st === "downloadable" || st === "downloading") { status("Downloading Chrome's speech model. This can take a minute…"); const ok = await installOnDevice(); st = ok ? "available" : await onDeviceStatus(); }
+    state.results.on_device = st;
+    if (st !== "available") { log(`On-device recognizer: ${st}. Setup ${s.id} skipped.`); status(`Setup ${s.id} is not available in this browser (${st}).`); await sleep(2500); return nextSetup(); }
+  }
+  const listener = new Listener({ continuous: s.continuous, holdStream: s.holdStream, phrases: s.phrases ? phraseList() : null, processLocally: !!s.processLocally });
   const prep = await listener.prepare();          // inside the tap: one microphone request for the held stream
   state.listener = listener; state.skip = false;
   const run = { skipped: false }; let skipNow; const skipped = new Promise((r) => (skipNow = r));
@@ -279,6 +286,8 @@ async function runTrial(s, listener, letter, run = {}) {
   trial.onset_ms = ok ? ok.onset_ms : null;
   trial.audio_source = listener.audioSource; if (s.phrases) trial.phrases_applied = listener.phrasesApplied;
   if (run.skipped) return;               // cut short by End this setup: not counted
+  const fatal = trial.attempts.map((a) => a.end).find((e) => /^error:(phrases-not-supported|language-not-supported|not-allowed|service-not-allowed)/.test(e || ""));
+  if (fatal) { (state.results.setup_errors ||= {})[s.id] = fatal.slice(6); log(`Chrome: ${fatal.slice(6)}. Ending setup ${s.id}.`); state.onSkip && state.onSkip(); return; }
   state.results.trials.push(trial);
   setMic(false);
   status({ correct: "Heard it.", tap: "Would go to tapping.", incorrect: "Marked wrong.", "no-response": "Nothing heard." }[trial.outcome] || "");

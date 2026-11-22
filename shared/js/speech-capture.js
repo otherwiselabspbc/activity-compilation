@@ -5,6 +5,8 @@
 //  * Default turn-taking is half-duplex: the recognizer is OFF while narration plays, and starts the moment the
 //    prompt ends, so nothing is thrown away by timing.
 //  * A correct answer is accepted from interim or final results, at any rank.
+//  * Sessions run in continuous mode, opened after the prompt and closed when the try ends: Otto's Chrome run
+//    (2026-11-22) returned no text at all for single-utterance sessions on isolated letters.
 //  * "Incorrect" needs the same wrong answer on both attempts (R-1, R-2); everything else unclear is `uncertain`.
 //  * No separate held microphone stream by default; `holdStream` exists for hosts that re-ask on every start.
 //  * attemptLegacy() reproduces ORT-22's listen-through-narration flow for the speech bench comparison ONLY.
@@ -129,6 +131,17 @@ export const SR = typeof window !== "undefined" ? window.SpeechRecognition || wi
 
 export function speechSupported() { return !!SR && !!window.isSecureContext; }
 
+/** Chrome's on-device recognizer for a language: available | downloadable | downloading | unavailable | unsupported. */
+export async function onDeviceStatus(lang = "en-US") {
+  if (!SR || typeof SR.available !== "function") return "unsupported";
+  try { return String(await SR.available({ langs: [lang], processLocally: true })); } catch (e) { return "unsupported:" + (e?.name || ""); }
+}
+/** Ask Chrome to download the on-device model. Resolves true when it is installed. */
+export async function installOnDevice(lang = "en-US") {
+  if (!SR || typeof SR.install !== "function") return false;
+  try { return !!(await SR.install({ langs: [lang], processLocally: true })); } catch { return false; }
+}
+
 export function phrasesSupported() {
   if (!SR || typeof window.SpeechRecognitionPhrase !== "function") return false;
   try { return "phrases" in new SR(); } catch { return false; }
@@ -140,8 +153,8 @@ export function phrasesSupported() {
  * Events: { type: start|audiostart|speechstart|speechend|interim|final|error|end, t, alts?, error? }
  */
 export class Listener {
-  constructor({ lang = "en-US", continuous = false, holdStream = false, phrases = null, onEvent } = {}) {
-    Object.assign(this, { lang, continuous, holdStream, phrases, onEvent: onEvent || (() => {}) });
+  constructor({ lang = "en-US", continuous = false, holdStream = false, phrases = null, processLocally = false, onEvent } = {}) {
+    Object.assign(this, { lang, continuous, holdStream, phrases, processLocally, onEvent: onEvent || (() => {}) });
     this.rec = null; this.wanted = false; this.active = false; this.gen = 0; this.stream = null;
     this.audioSource = null; this.phrasesApplied = false; this.ended = Promise.resolve();
   }
@@ -176,6 +189,7 @@ export class Listener {
   _start() {
     const g = ++this.gen; const r = new SR();
     r.lang = this.lang; r.interimResults = true; r.maxAlternatives = 5; r.continuous = this.continuous;
+    if (this.processLocally && "processLocally" in r) r.processLocally = true;   // Chrome on-device recognizer
     if (this.phrases && typeof window.SpeechRecognitionPhrase === "function") {
       try { r.phrases = this.phrases.map((p) => new window.SpeechRecognitionPhrase(p, 3.0)); this.phrasesApplied = true; }
       catch { this.phrasesApplied = false; }
@@ -225,7 +239,9 @@ export async function attemptHalfDuplex({ listener, speak, windowMs = 6000, targ
     const caps = []; let onset = null; let done = false; let extended = false; const t0 = now();
     const finish = (why) => {
       if (done) return; done = true; clearTimeout(timer); listener.onEvent = () => {}; listener.close();
-      resolve({ captures: caps, onset_ms: onset == null ? null : Math.round(onset - t0), end: why, score: scoreLetterAttempt(caps, target, lex) });
+      // Speech was detected but no text came back: a capture failure, so unclear, never "no response" (R-1, SR-6).
+      const score = !caps.length && onset != null ? { score: "no-letter", heard: null, reason: "speech-without-result" } : scoreLetterAttempt(caps, target, lex);
+      resolve({ captures: caps, onset_ms: onset == null ? null : Math.round(onset - t0), end: why, score });
     };
     const expire = () => { if (!extended && caps.length && !caps.some((c) => c.final)) { extended = true; timer = setTimeout(expire, 2000); return; } finish("window"); };
     let timer = setTimeout(expire, windowMs);
